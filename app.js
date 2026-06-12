@@ -28,6 +28,22 @@ const PERMIT_BUCKETS = ["early", "mid", "late"];
 
 const DEFAULT_VIEW = { center: [-121.3, 38.72], zoom: 8.2 }; // SACOG region fallback
 
+// The parcel transition: zoomed out, every project is a graduated dot; zoomed in
+// (~zoom 13, where labels appear) projects that have a real parcel footprint show
+// it instead. `dotFade` fades a dot to nothing across 12.5→13.5 *iff* the project
+// has a parcel; projects without one (has_parcel=0) keep their dot at all zooms.
+// A "zoom" expression must be the top-level input to interpolate/step, so the fade
+// is built as a camera+data composite: zoom drives the interpolate, and the
+// per-feature base opacity (zoom-independent) is supplied as the stop outputs.
+const PARCEL_ZOOM = 13;
+function dotFade(base) {
+  return [
+    "interpolate", ["linear"], ["zoom"],
+    PARCEL_ZOOM - 0.5, base,
+    PARCEL_ZOOM + 0.5, ["case", ["==", ["get", "has_parcel"], 1], 0, base],
+  ];
+}
+
 // ---- Basemap style: black background + dark raster tiles, no token ----
 const style = {
   version: 8,
@@ -273,17 +289,18 @@ map.on("load", async () => {
         14, 3.5,
         17, 4.5,
       ],
-      "circle-opacity": [
-        "match", ["get", "geocode_quality"],
-        "exact", 0.92,
-        "intersection", 0.88,
-        "approximate", 0.55,
-        "city_only", 0.4,
-        0.85,
-      ],
+      "circle-opacity": dotFade(
+        ["match", ["get", "geocode_quality"],
+          "exact", 0.92,
+          "intersection", 0.88,
+          "approximate", 0.55,
+          "city_only", 0.4,
+          0.85,
+        ]
+      ),
       "circle-stroke-width": 1,
       "circle-stroke-color": "rgba(255,255,255,0.6)",
-      "circle-stroke-opacity": 0.55,
+      "circle-stroke-opacity": dotFade(0.55),
     },
   });
 
@@ -349,6 +366,55 @@ map.on("load", async () => {
   map.on("click", "projects-circles", (e) => {
     if (e.features[0]) openDetail(e.features[0].properties);
   });
+
+  // ---- Project parcels: real footprints at label zoom (dots take over zoomed out) ----
+  try {
+    const pres = await fetch("data/pipeline_parcels.geojson", { cache: "no-cache" });
+    if (pres.ok) {
+      map.addSource("parcels", { type: "geojson", data: await pres.json() });
+      const parcelColor = [
+        "match", ["get", "color_bucket"],
+        "residential", BUCKET_COLORS.residential,
+        "mixed",       BUCKET_COLORS.mixed,
+        "nonres",      BUCKET_COLORS.nonres,
+        "#9aa0a6",
+      ];
+      // Inserted beneath the labels (so names stay on top) but above the dots, so
+      // the footprint reads as the dot's replacement once it fades in.
+      map.addLayer({
+        id: "parcels-fill", type: "fill", source: "parcels", minzoom: PARCEL_ZOOM - 0.5,
+        paint: {
+          "fill-color": parcelColor,
+          "fill-opacity": ["interpolate", ["linear"], ["zoom"],
+            PARCEL_ZOOM - 0.5, 0, PARCEL_ZOOM + 0.5, 0.34, 16, 0.42],
+        },
+      }, "projects-labels");
+      map.addLayer({
+        id: "parcels-line", type: "line", source: "parcels", minzoom: PARCEL_ZOOM - 0.5,
+        paint: {
+          "line-color": parcelColor,
+          "line-opacity": ["interpolate", ["linear"], ["zoom"], PARCEL_ZOOM - 0.5, 0, PARCEL_ZOOM + 0.5, 0.95],
+          "line-width": ["interpolate", ["linear"], ["zoom"], PARCEL_ZOOM, 1, 17, 2.2],
+        },
+      }, "projects-labels");
+
+      // Parcel hover + click reuse the same tooltip and detail dialog as the dots.
+      map.on("mouseenter", "parcels-fill", (e) => {
+        map.getCanvas().style.cursor = "pointer";
+        hoverTip.setLngLat(e.lngLat)
+          .setText(e.features[0].properties.project_name || "(unnamed project)")
+          .addTo(map);
+      });
+      map.on("mousemove", "parcels-fill", (e) => hoverTip.setLngLat(e.lngLat));
+      map.on("mouseleave", "parcels-fill", () => {
+        map.getCanvas().style.cursor = "";
+        hoverTip.remove();
+      });
+      map.on("click", "parcels-fill", (e) => {
+        if (e.features[0]) openDetail(e.features[0].properties);
+      });
+    }
+  } catch (e) { /* parcels optional; dots still work without them */ }
 });
 
 // ---- Detail dialog ----
