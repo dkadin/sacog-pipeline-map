@@ -16,6 +16,14 @@ const BUCKET_LABELS = {
   nonres:      "Non-Residential",
 };
 
+// Historical housing-permit overlay: net-new units sized by circle, year-finaled
+// by colour (green→red ramp, echoing the Induced Demand case-study maps).
+const PERMIT_COLORS = {
+  early: "#2ec27e", // 2001–2008
+  mid:   "#f5a623", // 2009–2019
+  late:  "#e8453a", // 2020–2025
+};
+
 const DEFAULT_VIEW = { center: [-121.3, 38.72], zoom: 8.2 }; // SACOG region fallback
 
 // ---- Basemap style: black background + dark raster tiles, no token ----
@@ -514,6 +522,51 @@ const OVERLAYS = {
       });
     },
   },
+  permits: {
+    file: "data/overlays/housing_permits.geojson",
+    add(data) {
+      map.addSource("ov-permits", { type: "geojson", data });
+      // radius ∝ √units (so area ∝ units); grows a little when zoomed in.
+      const u = ["sqrt", ["max", 1, ["coalesce", ["get", "u"], 1]]];
+      map.addLayer({
+        id: "ov-permits-circles", type: "circle", source: "ov-permits",
+        paint: {
+          "circle-color": [
+            "step", ["coalesce", ["get", "y"], 2005],
+            PERMIT_COLORS.early, 2009, PERMIT_COLORS.mid, 2020, PERMIT_COLORS.late,
+          ],
+          "circle-radius": [
+            "interpolate", ["linear"], ["zoom"],
+            9,  ["interpolate", ["linear"], u, 1, 1.6, 6, 4, 18.8, 9],
+            14, ["interpolate", ["linear"], u, 1, 3.2, 6, 8, 18.8, 18],
+          ],
+          "circle-opacity": 0.62,
+          "circle-stroke-color": "rgba(0,0,0,0.55)",
+          "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 11, 0, 15, 0.5],
+        },
+      }, "projects-circles");
+
+      // lightweight hover readout (units · year); no full detail dialog
+      const tip = new maplibregl.Popup({
+        closeButton: false, closeOnClick: false, className: "hover-tip", offset: 10,
+      });
+      map.on("mouseenter", "ov-permits-circles", (e) => {
+        map.getCanvas().style.cursor = "crosshair";
+        const p = e.features[0].properties;
+        const yr = p.y ? ` · finaled ${p.y}` : "";
+        tip.setLngLat(e.features[0].geometry.coordinates)
+          .setText(`${p.u} net-new unit${p.u == 1 ? "" : "s"}${yr}`)
+          .addTo(map);
+      });
+      map.on("mousemove", "ov-permits-circles", (e) => {
+        if (e.features[0]) tip.setLngLat(e.features[0].geometry.coordinates);
+      });
+      map.on("mouseleave", "ov-permits-circles", () => {
+        map.getCanvas().style.cursor = "";
+        tip.remove();
+      });
+    },
+  },
 };
 const overlayLoaded = {};
 
@@ -546,6 +599,14 @@ document.getElementById("toggle-transit")
 document.getElementById("toggle-comtypes").addEventListener("change", (e) => {
   document.getElementById("comtype-legend").hidden = !e.target.checked;
   toggleOverlay("comtypes", e.target);
+});
+document.getElementById("toggle-permits").addEventListener("change", (e) => {
+  document.getElementById("permit-legend").hidden = !e.target.checked;
+  document.getElementById("overlay-note").textContent =
+    e.target.checked && !overlayLoaded.permits ? "Loading 193k permits…" : "";
+  toggleOverlay("permits", e.target).then(() => {
+    if (overlayLoaded.permits) document.getElementById("overlay-note").textContent = "";
+  });
 });
 
 // ---- Basemap switch (dark labels-off ↔ aerial imagery) ----
