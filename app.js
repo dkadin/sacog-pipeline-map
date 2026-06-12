@@ -453,8 +453,9 @@ const OVERLAYS = {
       }, "projects-circles");
       map.addLayer({
         id: "ov-greenzones-label", type: "symbol", source: "ov-greenzones", minzoom: 10.5,
+        filter: ["==", ["geometry-type"], "Point"],
         layout: {
-          "text-field": ["get", "GZName"],
+          "text-field": ["get", "label"],
           "text-font": ["Noto Sans Regular"],
           "text-size": ["interpolate", ["linear"], ["zoom"], 10.5, 10, 14, 12.5],
           "text-max-width": 8, "symbol-placement": "point",
@@ -502,8 +503,9 @@ const OVERLAYS = {
       }, "projects-circles");
       map.addLayer({
         id: "ov-comtypes-label", type: "symbol", source: "ov-comtypes", minzoom: 11,
+        filter: ["==", ["geometry-type"], "Point"],
         layout: {
-          "text-field": ["get", "Webmap_ComType"],
+          "text-field": ["get", "label"],
           "text-font": ["Noto Sans Regular"],
           "text-size": ["interpolate", ["linear"], ["zoom"], 11, 9.5, 14, 12],
           "text-max-width": 9, "symbol-placement": "point",
