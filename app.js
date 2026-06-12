@@ -17,12 +17,14 @@ const BUCKET_LABELS = {
 };
 
 // Historical housing-permit overlay: net-new units sized by circle, year-finaled
-// by colour (green→red ramp, echoing the Induced Demand case-study maps).
+// by colour. A light→dark cyan→indigo gradient (chosen to be distinct from the
+// pipeline yellow/purple/red), so older permits read pale and newer ones deep.
 const PERMIT_COLORS = {
-  early: "#2ec27e", // 2001–2008
-  mid:   "#f5a623", // 2009–2019
-  late:  "#e8453a", // 2020–2025
+  early: "#7dd3fc", // 2001–2008 (light sky)
+  mid:   "#2f80ed", // 2009–2019 (mid blue)
+  late:  "#1a237e", // 2020–2025 (deep indigo)
 };
+const PERMIT_BUCKETS = ["early", "mid", "late"];
 
 const DEFAULT_VIEW = { center: [-121.3, 38.72], zoom: 8.2 }; // SACOG region fallback
 
@@ -528,43 +530,56 @@ const OVERLAYS = {
       map.addSource("ov-permits", { type: "geojson", data });
       // radius ∝ √units (so area ∝ units); grows a little when zoomed in.
       const u = ["sqrt", ["max", 1, ["coalesce", ["get", "u"], 1]]];
-      map.addLayer({
-        id: "ov-permits-circles", type: "circle", source: "ov-permits",
-        paint: {
-          "circle-color": [
-            "step", ["coalesce", ["get", "y"], 2005],
-            PERMIT_COLORS.early, 2009, PERMIT_COLORS.mid, 2020, PERMIT_COLORS.late,
-          ],
-          "circle-radius": [
-            "interpolate", ["linear"], ["zoom"],
-            9,  ["interpolate", ["linear"], u, 1, 1.6, 6, 4, 18.8, 9],
-            14, ["interpolate", ["linear"], u, 1, 3.2, 6, 8, 18.8, 18],
-          ],
-          "circle-opacity": 0.62,
-          "circle-stroke-color": "rgba(0,0,0,0.55)",
-          "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 11, 0, 15, 0.5],
-        },
-      }, "projects-circles");
+      const radius = [
+        "interpolate", ["linear"], ["zoom"],
+        9,  ["interpolate", ["linear"], u, 1, 1.6, 6, 4, 18.8, 9],
+        14, ["interpolate", ["linear"], u, 1, 3.2, 6, 8, 18.8, 18],
+      ];
+      // Each time period is its own layer (id ov-permits-<bucket>) so it can be
+      // toggled independently; the year filter splits the single source.
+      const yr = ["coalesce", ["get", "y"], 2005];
+      const buckets = [
+        ["early", PERMIT_COLORS.early, ["<=", yr, 2008]],
+        ["mid",   PERMIT_COLORS.mid,   ["all", [">=", yr, 2009], ["<=", yr, 2019]]],
+        ["late",  PERMIT_COLORS.late,  [">=", yr, 2020]],
+      ];
+      const ids = [];
+      for (const [name, color, filter] of buckets) {
+        const id = "ov-permits-" + name;
+        ids.push(id);
+        map.addLayer({
+          id, type: "circle", source: "ov-permits", filter,
+          paint: {
+            "circle-color": color,
+            "circle-radius": radius,
+            "circle-opacity": 0.7,
+            "circle-stroke-color": "rgba(0,0,0,0.55)",
+            "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 11, 0, 15, 0.5],
+          },
+        }, "projects-circles");
+      }
 
-      // lightweight hover readout (units · year); no full detail dialog
+      // lightweight hover readout (units · year) on any bucket layer
       const tip = new maplibregl.Popup({
         closeButton: false, closeOnClick: false, className: "hover-tip", offset: 10,
       });
-      map.on("mouseenter", "ov-permits-circles", (e) => {
-        map.getCanvas().style.cursor = "crosshair";
-        const p = e.features[0].properties;
-        const yr = p.y ? ` · finaled ${p.y}` : "";
-        tip.setLngLat(e.features[0].geometry.coordinates)
-          .setText(`${p.u} net-new unit${p.u == 1 ? "" : "s"}${yr}`)
-          .addTo(map);
-      });
-      map.on("mousemove", "ov-permits-circles", (e) => {
-        if (e.features[0]) tip.setLngLat(e.features[0].geometry.coordinates);
-      });
-      map.on("mouseleave", "ov-permits-circles", () => {
-        map.getCanvas().style.cursor = "";
-        tip.remove();
-      });
+      for (const id of ids) {
+        map.on("mouseenter", id, (e) => {
+          map.getCanvas().style.cursor = "crosshair";
+          const p = e.features[0].properties;
+          const y = p.y ? ` · finaled ${p.y}` : "";
+          tip.setLngLat(e.features[0].geometry.coordinates)
+            .setText(`${p.u} net-new unit${p.u == 1 ? "" : "s"}${y}`)
+            .addTo(map);
+        });
+        map.on("mousemove", id, (e) => {
+          if (e.features[0]) tip.setLngLat(e.features[0].geometry.coordinates);
+        });
+        map.on("mouseleave", id, () => {
+          map.getCanvas().style.cursor = "";
+          tip.remove();
+        });
+      }
     },
   },
 };
@@ -600,14 +615,33 @@ document.getElementById("toggle-comtypes").addEventListener("change", (e) => {
   document.getElementById("comtype-legend").hidden = !e.target.checked;
   toggleOverlay("comtypes", e.target);
 });
+// Show each permit bucket only when the master toggle AND its own sub-toggle are
+// on. toggleOverlay() flips all three ov-permits-* layers together; this then
+// narrows that down to the buckets the user actually wants visible.
+function applyPermitSubVisibility() {
+  const master = document.getElementById("toggle-permits").checked;
+  for (const b of PERMIT_BUCKETS) {
+    const id = "ov-permits-" + b;
+    if (!map.getLayer(id)) continue;
+    const sub = document.getElementById("pp-" + b);
+    const vis = master && (!sub || sub.checked) ? "visible" : "none";
+    map.setLayoutProperty(id, "visibility", vis);
+  }
+}
+
 document.getElementById("toggle-permits").addEventListener("change", (e) => {
   document.getElementById("permit-legend").hidden = !e.target.checked;
   document.getElementById("overlay-note").textContent =
     e.target.checked && !overlayLoaded.permits ? "Loading 193k permits…" : "";
   toggleOverlay("permits", e.target).then(() => {
     if (overlayLoaded.permits) document.getElementById("overlay-note").textContent = "";
+    applyPermitSubVisibility();
   });
 });
+for (const b of PERMIT_BUCKETS) {
+  const el = document.getElementById("pp-" + b);
+  if (el) el.addEventListener("change", applyPermitSubVisibility);
+}
 
 // ---- Basemap switch (dark labels-off ↔ aerial imagery) ----
 const bmButtons = { dark: document.getElementById("bm-dark"), imagery: document.getElementById("bm-imagery") };
