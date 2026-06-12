@@ -174,14 +174,11 @@ function addBoundaries() {
 // ---- Metrics panel ----
 function fmt(n) { return Number(n).toLocaleString("en-US"); }
 
-// City of Sacramento and unincorporated Sacramento County are distinct
-// jurisdictions in the data; label them so the two never read as one.
+// The exporter classifies each project geographically (city polygon, else
+// "Unincorporated <County> County") and emits the final display name, so the
+// ranking shows it verbatim — no "(city)"/"(county)" suffixes.
 function jurisLabel(j) {
-  const n = j.name || "";
-  if (j.type === "county") {
-    return n.replace(/ County$/, "") + " Co. (uninc.)";
-  }
-  return n.replace(/^(City|Town) of /, "") + " (city)";
+  return j.name || "";
 }
 
 function renderMetrics(m) {
@@ -217,7 +214,7 @@ function renderMetrics(m) {
       </div>
     </div>
 
-    <div class="metric-section">Top Jurisdictions by Pipeline Units</div>
+    <div class="metric-section">Housing Pipeline Rankings</div>
     <div class="jlist">${top}</div>
   `;
 }
