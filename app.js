@@ -489,6 +489,7 @@ const OVERLAYS = {
         "Centers and Corridors", "#ff3b30",
         "Established Communities", "#9aa0a6",
         "Developing Communities", "#b14bff",
+        "Rural Residential", "#ffe98a",
         "rgba(255,255,255,0.05)", // other comtypes: faint neutral
       ];
       map.addLayer({
