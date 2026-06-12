@@ -24,16 +24,16 @@
 
   <!-- Metrics panel (top-left) -->
   <div id="metrics" class="panel">
-    <div class="panel-title">Mapped pipeline</div>
+    <div class="panel-title">Mapped Pipeline</div>
     <div id="metrics-body"><div class="metric-loading">&hellip;</div></div>
   </div>
 
   <!-- Legend (project type colors) -->
   <div id="legend" class="panel">
-    <div class="panel-title">Project type</div>
+    <div class="panel-title">Project Type</div>
     <div class="legend-row"><span class="dot" style="background:#ffd400"></span> Residential</div>
-    <div class="legend-row"><span class="dot" style="background:#b14bff"></span> Mixed use (housing + jobs)</div>
-    <div class="legend-row"><span class="dot" style="background:#ff3b30"></span> Non-residential</div>
+    <div class="legend-row"><span class="dot" style="background:#b14bff"></span> Mixed Use (Housing + Jobs)</div>
+    <div class="legend-row"><span class="dot" style="background:#ff3b30"></span> Non-Residential</div>
     <div class="legend-note">Circle size &prop; units or jobs. Zoom in for names.</div>
     <div class="legend-note" id="legend-count">&hellip;</div>
   </div>
@@ -41,15 +41,21 @@
   <!-- Overlay layer toggles (top-right) -->
   <div id="layers" class="panel">
     <div class="panel-title">Overlays</div>
-    <label><input type="checkbox" id="toggle-greenzones" /> Green zones</label>
-    <label><input type="checkbox" id="toggle-transit" /> Transit priority areas</label>
-    <label><input type="checkbox" id="toggle-comtypes" /> Community types</label>
+    <label><input type="checkbox" id="toggle-greenzones" /> Green Zones</label>
+    <label><input type="checkbox" id="toggle-transit" /> Transit Priority Areas</label>
+    <label><input type="checkbox" id="toggle-comtypes" /> Community Types</label>
     <div id="comtype-legend" class="sub-legend" hidden>
-      <div class="legend-row"><span class="sq" style="background:#ff3b30"></span> Centers &amp; corridors</div>
+      <div class="legend-row"><span class="sq" style="background:#ff3b30"></span> Centers &amp; Corridors</div>
       <div class="legend-row"><span class="sq" style="background:#9aa0a6"></span> Established</div>
       <div class="legend-row"><span class="sq" style="background:#b14bff"></span> Developing</div>
     </div>
     <div class="legend-note" id="overlay-note"></div>
+
+    <div class="panel-title bm-title">Basemap</div>
+    <div class="basemap-toggle">
+      <button type="button" id="bm-dark" class="bm-btn active">Dark</button>
+      <button type="button" id="bm-imagery" class="bm-btn">Imagery</button>
+    </div>
   </div>
 
   <!-- Project detail dialog (slides in on click) -->

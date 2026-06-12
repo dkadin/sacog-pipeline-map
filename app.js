@@ -12,8 +12,8 @@ const BUCKET_COLORS = {
 };
 const BUCKET_LABELS = {
   residential: "Residential",
-  mixed:       "Mixed use (housing + jobs)",
-  nonres:      "Non-residential",
+  mixed:       "Mixed Use (Housing + Jobs)",
+  nonres:      "Non-Residential",
 };
 
 const DEFAULT_VIEW = { center: [-121.3, 38.72], zoom: 8.2 }; // SACOG region fallback
@@ -34,12 +34,32 @@ const style = {
       tileSize: 256,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     },
+    "esri-imagery": {
+      type: "raster",
+      tiles: [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: 'Imagery &copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community',
+    },
   },
   layers: [
     { id: "bg", type: "background", paint: { "background-color": "#000000" } },
     { id: "carto-dark", type: "raster", source: "carto-dark", paint: { "raster-opacity": 0.82 } },
+    { id: "esri-imagery", type: "raster", source: "esri-imagery", layout: { visibility: "none" } },
   ],
 };
+
+// Switch base imagery without rebuilding overlays/points (both rasters preloaded).
+function setBasemap(which) {
+  const dark = which !== "imagery";
+  if (map.getLayer("carto-dark"))
+    map.setLayoutProperty("carto-dark", "visibility", dark ? "visible" : "none");
+  if (map.getLayer("esri-imagery"))
+    map.setLayoutProperty("esri-imagery", "visibility", dark ? "none" : "visible");
+  document.body.classList.toggle("imagery-base", !dark);
+}
 
 const map = new maplibregl.Map({
   container: "map",
@@ -61,19 +81,33 @@ function setStatus(msg) {
   el.innerHTML = msg;
 }
 
+function titleCase(s) {
+  return String(s || "").toLowerCase().replace(/\b([a-z])/g, (_, c) => c.toUpperCase());
+}
+
 // ---- City + county boundaries (shown automatically) ----
+// CITY_NAME is present (as null) on county features, so test the *value* with
+// to-boolean rather than `has`, which would be true even for the null key.
+const IS_CITY = ["to-boolean", ["get", "CITY_NAME"]];
+const IS_COUNTY = ["!", ["to-boolean", ["get", "CITY_NAME"]]];
+
 function addBoundaries() {
   const url = "data/overlays/city_county_boundary.geojson";
   fetch(url, { cache: "no-cache" })
     .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
     .then((data) => {
+      // Bake a Title-Case display name (source values are ALL CAPS).
+      for (const f of data.features || []) {
+        const p = f.properties || {};
+        p.NAME_TC = titleCase(p.CITY_NAME || p.COUNTY || "");
+      }
       map.addSource("boundary", { type: "geojson", data });
-      // County outlines — brighter. Counties have no CITY_NAME.
+      // County outlines — brighter.
       map.addLayer({
         id: "boundary-county",
         type: "line",
         source: "boundary",
-        filter: ["!", ["has", "CITY_NAME"]],
+        filter: IS_COUNTY,
         paint: { "line-color": "#ffffff", "line-opacity": 0.34, "line-width": 1.3 },
       }, "projects-circles");
       // City outlines — dimmer, dashed.
@@ -81,7 +115,7 @@ function addBoundaries() {
         id: "boundary-city",
         type: "line",
         source: "boundary",
-        filter: ["has", "CITY_NAME"],
+        filter: IS_CITY,
         paint: {
           "line-color": "#9fb4d0",
           "line-opacity": 0.32,
@@ -94,19 +128,43 @@ function addBoundaries() {
         id: "boundary-county-label",
         type: "symbol",
         source: "boundary",
-        filter: ["!", ["has", "CITY_NAME"]],
+        filter: IS_COUNTY,
         maxzoom: 10,
         layout: {
-          "text-field": ["upcase", ["get", "COUNTY"]],
+          "text-field": ["get", "NAME_TC"],
           "text-font": ["Noto Sans Regular"],
           "text-size": 11,
-          "text-letter-spacing": 0.18,
+          "text-letter-spacing": 0.12,
           "symbol-placement": "point",
         },
         paint: {
           "text-color": "#7f8794",
           "text-halo-color": "#000000",
           "text-halo-width": 1.2,
+        },
+      }, "projects-circles");
+      // Subtle city name labels (mid zoom; collision-managed so they stay quiet).
+      map.addLayer({
+        id: "boundary-city-label",
+        type: "symbol",
+        source: "boundary",
+        filter: IS_CITY,
+        minzoom: 8.5,
+        layout: {
+          "text-field": ["get", "NAME_TC"],
+          "text-font": ["Noto Sans Regular"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 8.5, 10, 13, 13],
+          "text-letter-spacing": 0.04,
+          "symbol-placement": "point",
+          "text-max-width": 8,
+          "text-allow-overlap": false,
+          "text-optional": true,
+        },
+        paint: {
+          "text-color": "#c4cedd",
+          "text-opacity": 0.72,
+          "text-halo-color": "#000000",
+          "text-halo-width": 1.1,
         },
       }, "projects-circles");
     })
@@ -116,6 +174,16 @@ function addBoundaries() {
 // ---- Metrics panel ----
 function fmt(n) { return Number(n).toLocaleString("en-US"); }
 
+// City of Sacramento and unincorporated Sacramento County are distinct
+// jurisdictions in the data; label them so the two never read as one.
+function jurisLabel(j) {
+  const n = j.name || "";
+  if (j.type === "county") {
+    return n.replace(/ County$/, "") + " Co. (uninc.)";
+  }
+  return n.replace(/^(City|Town) of /, "") + " (city)";
+}
+
 function renderMetrics(m) {
   if (!m) return;
   const top = (m.top_jurisdictions || [])
@@ -123,10 +191,9 @@ function renderMetrics(m) {
       const pct = m.top_jurisdictions[0].units
         ? Math.round((j.units / m.top_jurisdictions[0].units) * 100)
         : 0;
-      const name = j.name.replace(/^City of /, "").replace(/ County$/, " Co. (uninc.)");
       return `<div class="jrow">
           <div class="jbar" style="width:${pct}%"></div>
-          <span class="jname">${esc(name)}</span>
+          <span class="jname">${esc(jurisLabel(j))}</span>
           <span class="jval">${fmt(j.units)}</span>
         </div>`;
     })
@@ -135,22 +202,22 @@ function renderMetrics(m) {
   document.getElementById("metrics-body").innerHTML = `
     <div class="metric-hero">
       <div class="num">${fmt(m.total_units)}</div>
-      <div class="lbl">housing units mapped</div>
+      <div class="lbl">Housing Units Mapped</div>
     </div>
-    <div class="metric-sub">${fmt(m.total_jobs)} estimated jobs &middot; ${fmt(m.projects_mapped)} projects</div>
+    <div class="metric-sub">${fmt(m.total_jobs)} Estimated Jobs &middot; ${fmt(m.projects_mapped)} Projects</div>
 
     <div class="metric-pcts">
       <div class="pct">
         <div class="pct-num" style="color:#34c759">${m.pct_units_green}%</div>
-        <div class="pct-lbl">units in green zones</div>
+        <div class="pct-lbl">Units in Green Zones</div>
       </div>
       <div class="pct">
         <div class="pct-num" style="color:#3aa0ff">${m.pct_units_tpa}%</div>
-        <div class="pct-lbl">units in transit priority areas</div>
+        <div class="pct-lbl">Units in Transit Priority Areas</div>
       </div>
     </div>
 
-    <div class="metric-section">Top jurisdictions by pipeline units</div>
+    <div class="metric-section">Top Jurisdictions by Pipeline Units</div>
     <div class="jlist">${top}</div>
   `;
 }
@@ -284,22 +351,22 @@ const FIELD_LABELS = {
   county: "County",
   project_type: "Type",
   address: "Address",
-  units: "Housing units",
+  units: "Housing Units",
   affordable: "Affordable",
-  hotel_rooms: "Hotel rooms",
-  senior: "Senior housing",
-  residential_care: "Residential care",
-  nonres_sqft: "Non-res sq ft",
-  jobs_estimated: "Estimated jobs",
-  source_acres: "Site acres",
+  hotel_rooms: "Hotel Rooms",
+  senior: "Senior Housing",
+  residential_care: "Residential Care",
+  nonres_sqft: "Non-Res Sq Ft",
+  jobs_estimated: "Estimated Jobs",
+  source_acres: "Site Acres",
   res_den: "Density (du/ac)",
-  parking_spaces: "Parking spaces",
+  parking_spaces: "Parking Spaces",
   developer: "Developer",
   current_status: "Status",
   apn: "APN",
-  entry_date: "Source date",
+  entry_date: "Source Date",
   notes: "Notes",
-  geocode_quality: "Geocode precision",
+  geocode_quality: "Geocode Precision",
 };
 const FIELD_ORDER = [
   "project_number", "jurisdiction", "county", "project_type", "address",
@@ -314,6 +381,19 @@ function esc(s) {
 }
 function hasVal(v) { return v !== null && v !== undefined && String(v).trim() !== ""; }
 
+// Build the "Source" cell from the classified provenance.
+function sourceRow(p) {
+  const type = p.source_type;
+  const label = p.source_label;
+  const url = p.source_url;
+  if (!hasVal(label) && !hasVal(url)) return "";
+  if (hasVal(url)) {
+    const linkText = type === "agenda" ? "View staff report / agenda" : (label || "Open source");
+    return `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(linkText)} ↗</a>`;
+  }
+  return esc(label || "—");
+}
+
 function openDetail(p) {
   const bucket = p.color_bucket;
   const chipColor = BUCKET_COLORS[bucket] || "#9aa0a6";
@@ -326,8 +406,8 @@ function openDetail(p) {
   html += `<div class="detail-sub">${esc([p.jurisdiction, p.county && p.county + " County"].filter(hasVal).join(" · "))}</div>`;
 
   const flags = [];
-  if (Number(p.in_green_zone)) flags.push(`<span class="flag flag-green">In green zone</span>`);
-  if (Number(p.in_tpa)) flags.push(`<span class="flag flag-tpa">Transit priority area</span>`);
+  if (Number(p.in_green_zone)) flags.push(`<span class="flag flag-green">In Green Zone</span>`);
+  if (Number(p.in_tpa)) flags.push(`<span class="flag flag-tpa">Transit Priority Area</span>`);
   if (flags.length) html += `<div class="detail-flags">${flags.join("")}</div>`;
 
   if (hasVal(metricVal) && Number(metricVal) > 0) {
@@ -341,9 +421,8 @@ function openDetail(p) {
     v = key === "geocode_quality" ? `<span class="quality-badge">${esc(v)}</span>` : esc(v);
     html += `<tr><th>${esc(FIELD_LABELS[key] || key)}</th><td>${v}</td></tr>`;
   }
-  if (hasVal(p.source)) {
-    html += `<tr><th>Source</th><td><a href="${esc(p.source)}" target="_blank" rel="noopener">View agenda / article ↗</a></td></tr>`;
-  }
+  const srcRow = sourceRow(p);
+  if (srcRow) html += `<tr><th>Source</th><td>${srcRow}</td></tr>`;
   html += `</table>`;
 
   document.getElementById("detail-body").innerHTML = html;
@@ -372,6 +451,19 @@ const OVERLAYS = {
         id: "ov-greenzones-line", type: "line", source: "ov-greenzones",
         paint: { "line-color": "#34c759", "line-opacity": 0.6, "line-width": 0.8 },
       }, "projects-circles");
+      map.addLayer({
+        id: "ov-greenzones-label", type: "symbol", source: "ov-greenzones", minzoom: 10.5,
+        layout: {
+          "text-field": ["get", "GZName"],
+          "text-font": ["Noto Sans Regular"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 10.5, 10, 14, 12.5],
+          "text-max-width": 8, "symbol-placement": "point",
+          "text-allow-overlap": false, "text-optional": true,
+        },
+        paint: {
+          "text-color": "#86e6a6", "text-halo-color": "#04210f", "text-halo-width": 1.3,
+        },
+      });
     },
   },
   transit: {
@@ -407,6 +499,19 @@ const OVERLAYS = {
         id: "ov-comtypes-line", type: "line", source: "ov-comtypes",
         paint: { "line-color": fillColor, "line-opacity": 0.45, "line-width": 0.5 },
       }, "projects-circles");
+      map.addLayer({
+        id: "ov-comtypes-label", type: "symbol", source: "ov-comtypes", minzoom: 11,
+        layout: {
+          "text-field": ["get", "Webmap_ComType"],
+          "text-font": ["Noto Sans Regular"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 11, 9.5, 14, 12],
+          "text-max-width": 9, "symbol-placement": "point",
+          "text-allow-overlap": false, "text-optional": true,
+        },
+        paint: {
+          "text-color": "#e7daf6", "text-halo-color": "#1a0a2e", "text-halo-width": 1.3,
+        },
+      });
     },
   },
 };
@@ -442,3 +547,14 @@ document.getElementById("toggle-comtypes").addEventListener("change", (e) => {
   document.getElementById("comtype-legend").hidden = !e.target.checked;
   toggleOverlay("comtypes", e.target);
 });
+
+// ---- Basemap switch (dark labels-off ↔ aerial imagery) ----
+const bmButtons = { dark: document.getElementById("bm-dark"), imagery: document.getElementById("bm-imagery") };
+function selectBasemap(which) {
+  setBasemap(which);
+  for (const [k, btn] of Object.entries(bmButtons)) {
+    if (btn) btn.classList.toggle("active", k === which);
+  }
+}
+if (bmButtons.dark) bmButtons.dark.addEventListener("click", () => selectBasemap("dark"));
+if (bmButtons.imagery) bmButtons.imagery.addEventListener("click", () => selectBasemap("imagery"));
