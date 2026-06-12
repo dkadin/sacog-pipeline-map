@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>SACOG Region Pipeline Project Inventory</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="description" content="Interactive inventory of the development pipeline across the SACOG region — housing units and jobs by location." />
+
+  <!-- MapLibre GL JS (free, open source, no API key) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.min.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Title bar -->
+  <header id="titlebar">
+    <h1>SACOG Region Pipeline Project Inventory</h1>
+    <div id="subtitle">Development pipeline &mdash; housing units &amp; jobs by location</div>
+  </header>
+
+  <!-- Map -->
+  <div id="map"></div>
+
+  <!-- Metrics panel (top-left) -->
+  <div id="metrics" class="panel">
+    <div class="panel-title">Mapped pipeline</div>
+    <div id="metrics-body"><div class="metric-loading">&hellip;</div></div>
+  </div>
+
+  <!-- Legend (project type colors) -->
+  <div id="legend" class="panel">
+    <div class="panel-title">Project type</div>
+    <div class="legend-row"><span class="dot" style="background:#ffd400"></span> Residential</div>
+    <div class="legend-row"><span class="dot" style="background:#b14bff"></span> Mixed use (housing + jobs)</div>
+    <div class="legend-row"><span class="dot" style="background:#ff3b30"></span> Non-residential</div>
+    <div class="legend-note">Circle size &prop; units or jobs. Zoom in for names.</div>
+    <div class="legend-note" id="legend-count">&hellip;</div>
+  </div>
+
+  <!-- Overlay layer toggles (top-right) -->
+  <div id="layers" class="panel">
+    <div class="panel-title">Overlays</div>
+    <label><input type="checkbox" id="toggle-greenzones" /> Green zones</label>
+    <label><input type="checkbox" id="toggle-transit" /> Transit priority areas</label>
+    <label><input type="checkbox" id="toggle-comtypes" /> Community types</label>
+    <div id="comtype-legend" class="sub-legend" hidden>
+      <div class="legend-row"><span class="sq" style="background:#ff3b30"></span> Centers &amp; corridors</div>
+      <div class="legend-row"><span class="sq" style="background:#9aa0a6"></span> Established</div>
+      <div class="legend-row"><span class="sq" style="background:#b14bff"></span> Developing</div>
+    </div>
+    <div class="legend-note" id="overlay-note"></div>
+  </div>
+
+  <!-- Project detail dialog (slides in on click) -->
+  <aside id="detail" class="panel" aria-hidden="true">
+    <button id="detail-close" aria-label="Close">&times;</button>
+    <div id="detail-body"></div>
+  </aside>
+
+  <script src="app.js"></script>
+</body>
+</html>
