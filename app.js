@@ -397,6 +397,9 @@ map.on("load", async () => {
           "line-width": ["interpolate", ["linear"], ["zoom"], PARCEL_ZOOM, 1, 17, 2.2],
         },
       }, "projects-labels");
+      // these parcels were just inserted above the permit dots; if the permit
+      // overlay is on, lift the dots back above the parcels.
+      if (overlayLoaded.permits) raisePermitsAboveParcels();
 
       // Parcel hover + click reuse the same tooltip and detail dialog as the dots.
       map.on("mouseenter", "parcels-fill", (e) => {
@@ -425,6 +428,7 @@ const FIELD_LABELS = {
   project_type: "Type",
   address: "Address",
   units: "Housing Units",
+  remaining_units: "Remaining Units",
   affordable: "Affordable",
   hotel_rooms: "Hotel Rooms",
   senior: "Senior Housing",
@@ -443,7 +447,7 @@ const FIELD_LABELS = {
 };
 const FIELD_ORDER = [
   "project_number", "jurisdiction", "county", "project_type", "address",
-  "units", "affordable", "hotel_rooms", "senior", "residential_care",
+  "units", "remaining_units", "affordable", "hotel_rooms", "senior", "residential_care",
   "nonres_sqft", "jobs_estimated", "source_acres", "res_den", "parking_spaces",
   "developer", "current_status", "apn", "entry_date", "notes", "geocode_quality",
 ];
@@ -681,6 +685,18 @@ document.getElementById("toggle-comtypes").addEventListener("change", (e) => {
   document.getElementById("comtype-legend").hidden = !e.target.checked;
   toggleOverlay("comtypes", e.target);
 });
+// Permit dots load beneath projects-circles (so they don't obscure the pipeline
+// dots when zoomed out), but the pipeline PARCEL polygons sit above the dots and
+// would otherwise cover the permits. Lift the permit layers to just beneath the
+// name labels so they read on top of the parcels when the overlay is on.
+function raisePermitsAboveParcels() {
+  const before = map.getLayer("projects-labels") ? "projects-labels" : undefined;
+  for (const b of PERMIT_BUCKETS) {        // early -> mid -> late, so late ends up on top
+    const id = "ov-permits-" + b;
+    if (map.getLayer(id)) map.moveLayer(id, before);
+  }
+}
+
 // Show each permit bucket only when the master toggle AND its own sub-toggle are
 // on. toggleOverlay() flips all three ov-permits-* layers together; this then
 // narrows that down to the buckets the user actually wants visible.
@@ -693,6 +709,7 @@ function applyPermitSubVisibility() {
     const vis = master && (!sub || sub.checked) ? "visible" : "none";
     map.setLayoutProperty(id, "visibility", vis);
   }
+  if (master) raisePermitsAboveParcels();
 }
 
 document.getElementById("toggle-permits").addEventListener("change", (e) => {

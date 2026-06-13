@@ -138,6 +138,11 @@ html, body {
   cursor: pointer; user-select: none;
 }
 .permit-sub input { accent-color: var(--accent); flex: 0 0 auto; }
+.permit-sub .dot {
+  width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto;
+  /* bright ring so the darkest indigo (2020-2025) swatch reads on the dark panel */
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5);
+}
 
 /* ---- Basemap switch ---- */
 .bm-title { margin-top: 12px; }
