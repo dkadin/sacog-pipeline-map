@@ -352,6 +352,28 @@ table.detail-table a:hover { text-decoration: underline; }
 #inputs-grid a { color: var(--accent); text-decoration: none; }
 #inputs-grid a:hover { text-decoration: underline; }
 
+/* Short viewports (most laptops): the metrics panel's full top-10 rankings
+   used to run down into the bottom-left legend, which paints over the Pipeline
+   Inputs button. Cap the panel and let just the rankings list scroll, so the
+   hero numbers and the button stay visible and clear of the legend. Taller
+   screens (desktops / external monitors) keep the exact un-scrolled layout. */
+@media (max-height: 900px) {
+  #metrics {
+    max-height: calc(100vh - 240px);
+    display: flex; flex-direction: column;
+  }
+  #metrics .panel-title { flex: 0 0 auto; }
+  #metrics-body {
+    flex: 1 1 auto; min-height: 0;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .jlist {
+    flex: 1 1 auto; min-height: 64px;
+    overflow-y: auto; padding-right: 4px;
+  }
+  #inputs-btn { flex: 0 0 auto; }
+}
+
 @media (max-width: 720px) {
   #titlebar h1 { font-size: 16px; }
   #metrics { width: 200px; top: 64px; padding: 10px 11px; }

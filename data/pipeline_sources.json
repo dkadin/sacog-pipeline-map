@@ -1,12 +1,12 @@
 {
   "generated_at": "Jun 15, 2026",
-  "total": 836,
+  "total": 835,
   "cards": [
     {
       "key": "agenda",
       "title": "Agendas & Staff Reports",
       "blurb": "Planning Commission, City Council and Board of Supervisors agendas across the region, crawled for new projects and linked to the actual staff report.",
-      "count": 69,
+      "count": 68,
       "freshness": "Crawled Jan 5, 2026 \u2013 Jun 11, 2026",
       "detail": "46 bodies \u00b7 last run Jun 4, 2026",
       "recent": [
