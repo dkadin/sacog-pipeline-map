@@ -69,22 +69,62 @@ const style = {
       maxzoom: 19,
       attribution: 'Imagery &copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community',
     },
+    // Labels-only raster (street + place names) so zoomed-in views have context
+    // the no-labels basemap omits. Faded in by zoom and kept beneath the data.
+    "carto-dark-labels": {
+      type: "raster",
+      tiles: [
+        "https://a.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png",
+        "https://b.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png",
+        "https://c.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png",
+        "https://d.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png",
+      ],
+      tileSize: 256,
+    },
   },
   layers: [
     { id: "bg", type: "background", paint: { "background-color": "#000000" } },
     { id: "carto-dark", type: "raster", source: "carto-dark", paint: { "raster-opacity": 0.82 } },
     { id: "esri-imagery", type: "raster", source: "esri-imagery", layout: { visibility: "none" } },
+    // Street/place labels appear as you zoom in (off at the regional view to keep
+    // it clean); shown only on the dark base (hidden over imagery in setBasemap).
+    { id: "carto-dark-labels", type: "raster", source: "carto-dark-labels",
+      paint: { "raster-opacity": ["interpolate", ["linear"], ["zoom"], 10.5, 0, 12, 0.85] } },
   ],
 };
+
+// Parcel polygons read fine on the dark base at low opacity, but over the busy
+// aerial photo they need a stronger fill and heavier outline to stay legible.
+// styleParcelsForBasemap() swaps the paint props whenever the base changes.
+let currentBasemap = "dark";
+const PARCEL_FILL = {
+  dark:    ["interpolate", ["linear"], ["zoom"], PARCEL_ZOOM - 0.5, 0, PARCEL_ZOOM + 0.5, 0.34, 16, 0.42],
+  imagery: ["interpolate", ["linear"], ["zoom"], PARCEL_ZOOM - 0.5, 0, PARCEL_ZOOM + 0.5, 0.5,  16, 0.62],
+};
+const PARCEL_LINE_W = {
+  dark:    ["interpolate", ["linear"], ["zoom"], PARCEL_ZOOM, 1,   17, 2.2],
+  imagery: ["interpolate", ["linear"], ["zoom"], PARCEL_ZOOM, 1.6, 17, 3.4],
+};
+function styleParcelsForBasemap() {
+  if (map.getLayer("parcels-fill"))
+    map.setPaintProperty("parcels-fill", "fill-opacity", PARCEL_FILL[currentBasemap]);
+  if (map.getLayer("parcels-line"))
+    map.setPaintProperty("parcels-line", "line-width", PARCEL_LINE_W[currentBasemap]);
+}
 
 // Switch base imagery without rebuilding overlays/points (both rasters preloaded).
 function setBasemap(which) {
   const dark = which !== "imagery";
+  currentBasemap = dark ? "dark" : "imagery";
   if (map.getLayer("carto-dark"))
     map.setLayoutProperty("carto-dark", "visibility", dark ? "visible" : "none");
   if (map.getLayer("esri-imagery"))
     map.setLayoutProperty("esri-imagery", "visibility", dark ? "none" : "visible");
+  // Street/place labels only belong over the dark base — they're illegible on imagery.
+  if (map.getLayer("carto-dark-labels"))
+    map.setLayoutProperty("carto-dark-labels", "visibility", dark ? "visible" : "none");
   document.body.classList.toggle("imagery-base", !dark);
+  styleParcelsForBasemap();
 }
 
 const map = new maplibregl.Map({
@@ -227,7 +267,14 @@ function renderMetrics(m) {
       <div class="num">${fmt(m.total_units)}</div>
       <div class="lbl">Housing Units Mapped</div>
     </div>
-    <div class="metric-sub">${fmt(m.total_jobs)} Estimated Jobs &middot; ${fmt(m.projects_mapped)} Projects</div>
+    <div class="metric-hero">
+      <div class="num">${fmt(m.total_jobs)}</div>
+      <div class="lbl">Estimated Jobs</div>
+    </div>
+    <div class="metric-hero">
+      <div class="num">${fmt(m.projects_mapped)}</div>
+      <div class="lbl">Projects Mapped</div>
+    </div>
 
     <div class="metric-pcts">
       <div class="pct">
@@ -258,7 +305,6 @@ map.on("load", async () => {
       "No geocoded projects yet.<br>Run <code>tools/geocode.py</code> then " +
       "<code>tools/export_geojson.py</code> to populate the map."
     );
-    document.getElementById("legend-count").textContent = "0 projects";
     return;
   }
 
@@ -272,6 +318,10 @@ map.on("load", async () => {
     id: "projects-circles",
     type: "circle",
     source: "projects",
+    // Draw the smallest dots last (on top) so a big circle never buries a small
+    // neighbour. circle-sort-key sorts ascending, so negate radius: big → very
+    // negative (drawn first/under), small → near zero (drawn last/over).
+    layout: { "circle-sort-key": ["*", -1, ["get", "radius"]] },
     paint: {
       "circle-color": [
         "match", ["get", "color_bucket"],
@@ -342,9 +392,6 @@ map.on("load", async () => {
     if (any) map.fitBounds(b, { padding: 70, maxZoom: 12, duration: 0 });
   }
 
-  document.getElementById("legend-count").textContent =
-    `${features.length} project${features.length === 1 ? "" : "s"} mapped`;
-
   // ---- Interactions ----
   const hoverTip = new maplibregl.Popup({
     closeButton: false, closeOnClick: false, className: "hover-tip", offset: 12,
@@ -397,6 +444,10 @@ map.on("load", async () => {
           "line-width": ["interpolate", ["linear"], ["zoom"], PARCEL_ZOOM, 1, 17, 2.2],
         },
       }, "projects-labels");
+      // Parcels load after the basemap/pipeline toggles may already have changed,
+      // so reconcile both now that the layers exist.
+      styleParcelsForBasemap();
+      applyPipelineVisibility();
       // these parcels were just inserted above the permit dots; if the permit
       // overlay is on, lift the dots back above the parcels.
       if (overlayLoaded.permits) raisePermitsAboveParcels();
@@ -712,8 +763,26 @@ function applyPermitSubVisibility() {
   if (master) raisePermitsAboveParcels();
 }
 
+// "Turn pipeline off" — temporarily hide the entire pipeline inventory (dots,
+// labels, parcels) so the permits/overlays can be read on their own. Lives inside
+// the permit legend, so it's only reachable while the permits panel is expanded.
+const PIPELINE_LAYERS = ["parcels-fill", "parcels-line", "projects-labels", "projects-circles"];
+function applyPipelineVisibility() {
+  const off = document.getElementById("toggle-pipeline-off").checked;
+  for (const id of PIPELINE_LAYERS) {
+    if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", off ? "none" : "visible");
+  }
+}
+document.getElementById("toggle-pipeline-off")
+  .addEventListener("change", applyPipelineVisibility);
+
 document.getElementById("toggle-permits").addEventListener("change", (e) => {
   document.getElementById("permit-legend").hidden = !e.target.checked;
+  // Collapsing the permits panel must never strand the pipeline in a hidden state.
+  if (!e.target.checked) {
+    const off = document.getElementById("toggle-pipeline-off");
+    if (off && off.checked) { off.checked = false; applyPipelineVisibility(); }
+  }
   document.getElementById("overlay-note").textContent =
     e.target.checked && !overlayLoaded.permits ? "Loading 193k permits…" : "";
   toggleOverlay("permits", e.target).then(() => {

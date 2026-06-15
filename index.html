@@ -16,7 +16,6 @@
   <!-- Title bar -->
   <header id="titlebar">
     <h1>SACOG Region Pipeline Project Inventory</h1>
-    <div id="subtitle">Development pipeline &mdash; housing units &amp; jobs by location</div>
   </header>
 
   <!-- Map -->
@@ -34,8 +33,6 @@
     <div class="legend-row"><span class="dot" style="background:#ffd400"></span> Residential</div>
     <div class="legend-row"><span class="dot" style="background:#b14bff"></span> Mixed Use (Housing + Jobs)</div>
     <div class="legend-row"><span class="dot" style="background:#ff3b30"></span> Non-Residential</div>
-    <div class="legend-note">Circle size &prop; units or jobs. Zoom in for parcel footprints &amp; names.</div>
-    <div class="legend-note" id="legend-count">&hellip;</div>
   </div>
 
   <!-- Overlay layer toggles (top-right) -->
@@ -55,7 +52,7 @@
       <label class="permit-sub"><input type="checkbox" id="pp-early" checked /><span class="dot" style="background:#7dd3fc"></span> Finaled 2001&ndash;2008</label>
       <label class="permit-sub"><input type="checkbox" id="pp-mid" checked /><span class="dot" style="background:#2f80ed"></span> Finaled 2009&ndash;2019</label>
       <label class="permit-sub"><input type="checkbox" id="pp-late" checked /><span class="dot" style="background:#1a237e"></span> Finaled 2020&ndash;2025</label>
-      <div class="legend-note">Circle size &prop; net-new units (193,390 permits).</div>
+      <label class="permit-sub pipeline-off"><input type="checkbox" id="toggle-pipeline-off" /> Turn pipeline off</label>
     </div>
     <div class="legend-note" id="overlay-note"></div>
 
