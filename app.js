@@ -89,7 +89,7 @@ const style = {
     // Street/place labels appear as you zoom in (off at the regional view to keep
     // it clean); shown only on the dark base (hidden over imagery in setBasemap).
     { id: "carto-dark-labels", type: "raster", source: "carto-dark-labels",
-      paint: { "raster-opacity": ["interpolate", ["linear"], ["zoom"], 10.5, 0, 12, 0.85] } },
+      paint: { "raster-opacity": ["interpolate", ["linear"], ["zoom"], 12.5, 0, 14, 0.85] } },
   ],
 };
 
