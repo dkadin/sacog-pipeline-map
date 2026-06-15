@@ -25,6 +25,11 @@
   <div id="metrics" class="panel">
     <div class="panel-title">Mapped Pipeline</div>
     <div id="metrics-body"><div class="metric-loading">&hellip;</div></div>
+    <!-- Pipeline Inputs button (opens the sources dashboard) -->
+    <button id="inputs-btn" type="button" aria-haspopup="dialog">
+      <span class="inputs-btn-title">Pipeline Inputs</span>
+      <span class="inputs-btn-sub">Where these projects come from &rsaquo;</span>
+    </button>
   </div>
 
   <!-- Legend (project type colors) -->
@@ -33,6 +38,20 @@
     <div class="legend-row"><span class="dot" style="background:#ffd400"></span> Residential</div>
     <div class="legend-row"><span class="dot" style="background:#b14bff"></span> Mixed Use (Housing + Jobs)</div>
     <div class="legend-row"><span class="dot" style="background:#ff3b30"></span> Non-Residential</div>
+  </div>
+
+  <!-- Pipeline Inputs full-page dashboard -->
+  <div id="inputs-overlay" role="dialog" aria-modal="true" aria-label="Pipeline Inputs" aria-hidden="true">
+    <div id="inputs-panel">
+      <header id="inputs-header">
+        <div>
+          <h2>Pipeline Inputs</h2>
+          <p id="inputs-intro">Where these projects come from.</p>
+        </div>
+        <button id="inputs-close" aria-label="Close">&times;</button>
+      </header>
+      <div id="inputs-grid"><div class="metric-loading">Loading&hellip;</div></div>
+    </div>
   </div>
 
   <!-- Overlay layer toggles (top-right) -->

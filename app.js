@@ -805,3 +805,87 @@ function selectBasemap(which) {
 }
 if (bmButtons.dark) bmButtons.dark.addEventListener("click", () => selectBasemap("dark"));
 if (bmButtons.imagery) bmButtons.imagery.addEventListener("click", () => selectBasemap("imagery"));
+
+// ---- Pipeline Inputs dashboard (sources of the inventory) ----
+let inputsData = null;
+
+function inputItem(it) {
+  const date = it.date ? `<span class="src-date">${esc(it.date)}</span>` : `<span class="src-date"></span>`;
+  const name = it.url
+    ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.name)} ↗</a>`
+    : esc(it.name);
+  return `<li class="src-item">${date}<span class="src-name">${name}</span></li>`;
+}
+
+function feedItem(f) {
+  const meta = f.count + (f.last ? " · " + esc(f.last) : "");
+  return `<li class="src-feed"><a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.name)} ↗</a>`
+       + `<span class="src-feed-meta">${meta}</span></li>`;
+}
+
+function inputsCardHTML(c) {
+  const recentLabel = {
+    agenda: "Recent staff reports", tracker: "Recently added",
+    news: "Recent articles", routing: "Recently received",
+    inventory: "Sample of inventory",
+  }[c.key] || "Recent additions";
+
+  let html = `<section class="src-card src-${esc(c.key)}">`;
+  html += `<div class="src-head"><h3>${esc(c.title)}</h3><span class="src-count">${fmt(c.count)}</span></div>`;
+  html += `<div class="src-fresh">${esc(c.freshness)}`;
+  if (c.detail) html += ` <span class="src-detail">· ${esc(c.detail)}</span>`;
+  html += `</div>`;
+  html += `<p class="src-blurb">${esc(c.blurb)}</p>`;
+  if (c.feeds && c.feeds.length) {
+    html += `<div class="src-subhead">Working links (${c.feeds.length})</div>`;
+    html += `<ul class="src-feeds">${c.feeds.map(feedItem).join("")}</ul>`;
+  }
+  if (c.recent && c.recent.length) {
+    html += `<div class="src-subhead">${recentLabel}</div>`;
+    html += `<ul class="src-recent">${c.recent.map(inputItem).join("")}</ul>`;
+  }
+  html += `</section>`;
+  return html;
+}
+
+function renderInputs(d) {
+  const intro = document.getElementById("inputs-intro");
+  if (intro) intro.textContent =
+    `${fmt(d.total)} mapped projects, drawn from five feeds · updated ${d.generated_at}`;
+  document.getElementById("inputs-grid").innerHTML = d.cards.map(inputsCardHTML).join("");
+}
+
+async function openInputs() {
+  const ov = document.getElementById("inputs-overlay");
+  ov.classList.add("open");
+  ov.setAttribute("aria-hidden", "false");
+  if (!inputsData) {
+    try {
+      const res = await fetch("data/pipeline_sources.json", { cache: "no-cache" });
+      if (!res.ok) throw new Error(res.status);
+      inputsData = await res.json();
+      renderInputs(inputsData);
+    } catch (e) {
+      document.getElementById("inputs-grid").innerHTML =
+        `<div class="metric-loading">Couldn't load the inputs summary.</div>`;
+    }
+  }
+}
+
+function closeInputs() {
+  const ov = document.getElementById("inputs-overlay");
+  ov.classList.remove("open");
+  ov.setAttribute("aria-hidden", "true");
+}
+
+document.getElementById("inputs-btn").addEventListener("click", openInputs);
+document.getElementById("inputs-close").addEventListener("click", closeInputs);
+document.getElementById("inputs-overlay").addEventListener("click", (e) => {
+  if (e.target.id === "inputs-overlay") closeInputs();   // click the dimmed backdrop
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" &&
+      document.getElementById("inputs-overlay").classList.contains("open")) {
+    closeInputs();
+  }
+});

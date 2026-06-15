@@ -1,0 +1,372 @@
+{
+  "generated_at": "Jun 15, 2026",
+  "total": 1045,
+  "cards": [
+    {
+      "key": "agenda",
+      "title": "Agendas & Staff Reports",
+      "blurb": "Planning Commission, City Council and Board of Supervisors agendas across the region, crawled for new projects and linked to the actual staff report.",
+      "count": 117,
+      "freshness": "Crawled Jan 5, 2026 \u2013 Jun 11, 2026",
+      "detail": "46 bodies \u00b7 last run Jun 4, 2026",
+      "recent": [
+        {
+          "name": "Westpark Affordable Apartments",
+          "date": "Jun 3, 2026",
+          "url": "https://rosevilleca.portal.civicclerk.com/event/2956/overview"
+        },
+        {
+          "name": "Rio Del Oro Lot 67E Final Map",
+          "date": "Jun 1, 2026",
+          "url": "https://ranchocordovaca.portal.civicclerk.com/event/2658/overview"
+        },
+        {
+          "name": "Walmart Expansion Major Design Review",
+          "date": "May 27, 2026",
+          "url": "https://ranchocordovaca.portal.civicclerk.com/event/2726/overview"
+        },
+        {
+          "name": "Starbucks Circle K Project \u2014 Tentative Parcel Map",
+          "date": "May 26, 2026",
+          "url": "https://lincoln.granicus.com/AgendaViewer.php?view_id=1&clip_id=2255"
+        },
+        {
+          "name": "10132 Sheldon Road Rezone & Map",
+          "date": "May 21, 2026",
+          "url": "https://elkgrove.granicus.com/AgendaViewer.php?view_id=20&clip_id=2754"
+        },
+        {
+          "name": "Scotty Station Apartments",
+          "date": "May 19, 2026",
+          "url": "https://sacramento.legistar1.com/sacramento/attachments/59bb1f67-d25f-4f07-a038-d3dea8113794.pdf"
+        },
+        {
+          "name": "Orange Meadow Estates",
+          "date": "May 19, 2026",
+          "url": "https://agendanet.saccounty.gov/OnBaseAgendaOnline/Meetings"
+        },
+        {
+          "name": "Winding Ranch",
+          "date": "May 19, 2026",
+          "url": "https://agendanet.saccounty.gov/OnBaseAgendaOnline/Meetings"
+        }
+      ]
+    },
+    {
+      "key": "tracker",
+      "title": "Local Development Trackers",
+      "blurb": "Jurisdiction-run project lists and development maps, checked for new and updated projects. Working links below.",
+      "count": 283,
+      "freshness": "19 jurisdiction feeds",
+      "detail": "last pulled Jun 12, 2026",
+      "recent": [
+        {
+          "name": "Baseline Multi-Family Apartments (1875 Baseline Road, Roseville)",
+          "date": "Jun 12, 2026",
+          "url": "https://www.placer.ca.gov/2613/Current-Planning"
+        },
+        {
+          "name": "Old Auburn Apartments Design Review",
+          "date": "Jun 12, 2026",
+          "url": "https://www.placer.ca.gov/2613/Current-Planning"
+        },
+        {
+          "name": "TPC Placer One - Lots 47 & 48 Design Review Type A",
+          "date": "Jun 12, 2026",
+          "url": "https://www.placer.ca.gov/2613/Current-Planning"
+        },
+        {
+          "name": "Mill Creek Design Review Type A",
+          "date": "Jun 12, 2026",
+          "url": "https://www.placer.ca.gov/2613/Current-Planning"
+        },
+        {
+          "name": "Estia Dry Creek & Placer Creek Residential",
+          "date": "Jun 12, 2026",
+          "url": "https://www.placer.ca.gov/2613/Current-Planning"
+        },
+        {
+          "name": "Hidden Oaks Design Review",
+          "date": "Jun 12, 2026",
+          "url": "https://www.placer.ca.gov/2613/Current-Planning"
+        },
+        {
+          "name": "Enclave at Dry Creek Major Subdivision",
+          "date": "Jun 12, 2026",
+          "url": "https://www.placer.ca.gov/2613/Current-Planning"
+        },
+        {
+          "name": "Mann Grove Major Subdivision (Tentative Subdivision Map)",
+          "date": "Jun 12, 2026",
+          "url": "https://www.placer.ca.gov/2613/Current-Planning"
+        }
+      ],
+      "feeds": [
+        {
+          "name": "City of Elk Grove \u2014 Private Development Projects",
+          "url": "https://elkmap.maps.arcgis.com/apps/MapTour/index.html?appid=3c40052d00c34da6a10af32f609decb5",
+          "count": 40,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "Lincoln Development Activity Map",
+          "url": "https://services6.arcgis.com/ojAwglArv2d3JM03/arcgis/rest/services/Development_Activity_Public_View/FeatureServer/0",
+          "count": 35,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "City of Roseville Planning - Projects of Interest",
+          "url": "https://www.roseville.ca.gov/development_services/planning/projects_of_interest/index.php",
+          "count": 30,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "Placer County Active Planning Projects",
+          "url": "https://www.placer.ca.gov/2613/Current-Planning",
+          "count": 29,
+          "last": "Jun 12, 2026"
+        },
+        {
+          "name": "City of Rocklin Development Projects StoryMap",
+          "url": "https://storymaps.arcgis.com/stories/632bbef312ec415fa4833fa2eae51e8b",
+          "count": 23,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "City of Galt \u2014 Development Projects & Environmental Documents",
+          "url": "https://www.cityofgalt.org/government/community-development/planning/development-projects-environmental-documents",
+          "count": 21,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "City of Woodland \u2014 Development Projects tracker",
+          "url": "https://www.cityofwoodland.gov/1021/Development-Projects",
+          "count": 20,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "Downtown Sacramento Partnership Development Map",
+          "url": "https://www.downtownsac.org/do-business/development-map/",
+          "count": 18,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "City of Davis \u2014 Development Projects Public Map",
+          "url": "https://gisportal.cityofdavis.org/portal/apps/webappviewer/index.html?id=b33d874d6aa74a9788b27b618a938db6",
+          "count": 17,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "Rancho Cordova Major Developments and Projects",
+          "url": "https://www.cityofranchocordova.org/departments/community-development/planning/major-developments-and-projects",
+          "count": 11,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "West Sacramento Major Planning Projects & Initiatives",
+          "url": "https://www.cityofwestsacramento.org/government/departments/community-development/planning-division/major-planning-projects",
+          "count": 10,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "Engage El Dorado \u2014 Projects In Your Area",
+          "url": "https://engageeldorado.us.engagementhq.com/edc-projects-in-your-area",
+          "count": 8,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "City of Placerville Development Services Announcements",
+          "url": "https://www.cityofplacerville.org/development-services-announcements",
+          "count": 4,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "City of Colfax Current Projects",
+          "url": "https://colfax-ca.gov/government/planning/current-projects/",
+          "count": 4,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "City of Wheatland Community Development - Plans & Projects",
+          "url": "https://www.wheatland.ca.gov/community-development/page/other-projects-downloads",
+          "count": 4,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "Town of Loomis Current Projects",
+          "url": "https://loomis.ca.gov/current-projects-2/",
+          "count": 3,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "City of Citrus Heights \u2014 Planning Projects Viewer",
+          "url": "https://www.citrusheights.net/292/Current-Projects",
+          "count": 3,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "City of Folsom \u2014 Pending Development Projects (Non-Historic District)",
+          "url": "https://www.folsom.ca.us/government/community-development/planning-services/development-projects",
+          "count": 2,
+          "last": "Jun 2, 2026"
+        },
+        {
+          "name": "Yolo County Planning Division Current Projects",
+          "url": "https://www.yolocounty.gov/government/general-government-departments/community-services/planning-division/current-projects",
+          "count": 1,
+          "last": "Jun 2, 2026"
+        }
+      ]
+    },
+    {
+      "key": "routing",
+      "title": "Project Routing Emails",
+      "blurb": "Project routing / distribution emails forwarded to pipelineinventory@gmail.com and logged on arrival.",
+      "count": 54,
+      "freshness": "Last received Jun 12, 2026",
+      "detail": "",
+      "recent": [
+        {
+          "name": "Rocinante at the Park",
+          "date": "Jun 12, 2026",
+          "url": ""
+        },
+        {
+          "name": "Rosin Court Hotel",
+          "date": "Jun 12, 2026",
+          "url": ""
+        },
+        {
+          "name": "The Refuge",
+          "date": "Jun 12, 2026",
+          "url": ""
+        },
+        {
+          "name": "3684 Bret Harte Court Residential Hotel",
+          "date": "Jun 12, 2026",
+          "url": ""
+        },
+        {
+          "name": "5429 Marconi Ave Multi-Family Apartments",
+          "date": "May 30, 2026",
+          "url": ""
+        },
+        {
+          "name": "Madison Square Studios",
+          "date": "May 30, 2026",
+          "url": ""
+        },
+        {
+          "name": "Millennial Apartments",
+          "date": "May 30, 2026",
+          "url": ""
+        },
+        {
+          "name": "2856 Arden Way Multi-Family",
+          "date": "May 30, 2026",
+          "url": ""
+        }
+      ]
+    },
+    {
+      "key": "news",
+      "title": "News Coverage",
+      "blurb": "Development reporting \u2014 chiefly the Sacramento Business Journal \u2014 forwarded and logged for projects not yet in an agenda or tracker.",
+      "count": 133,
+      "freshness": "Last article Jun 2, 2026",
+      "detail": "",
+      "recent": [
+        {
+          "name": "Plumas Lake Cobblestone",
+          "date": "Jun 2, 2026",
+          "url": ""
+        },
+        {
+          "name": "Riverside Meadows Village 3",
+          "date": "Jun 2, 2026",
+          "url": ""
+        },
+        {
+          "name": "Hard Rock Sacramento at Fire Mountain Expansion",
+          "date": "Jun 2, 2026",
+          "url": ""
+        },
+        {
+          "name": "Dignity Health Advanced Ambulatory Care Center",
+          "date": "Jun 2, 2026",
+          "url": ""
+        },
+        {
+          "name": "The Addie",
+          "date": "May 31, 2026",
+          "url": ""
+        },
+        {
+          "name": "Blue Diamond Growers Campus Redevelopment",
+          "date": "May 31, 2026",
+          "url": ""
+        },
+        {
+          "name": "Capitol Annex Building",
+          "date": "May 12, 2026",
+          "url": "https://www.bizjournals.com/sacramento/news/2026/05/12/downtown-sacramento-construction-projects.html"
+        },
+        {
+          "name": "The Diggs",
+          "date": "May 12, 2026",
+          "url": "https://www.bizjournals.com/sacramento/news/2026/05/12/downtown-sacramento-construction-projects.html"
+        }
+      ]
+    },
+    {
+      "key": "inventory",
+      "title": "SACOG Existing Inventory",
+      "blurb": "The baseline regional development inventory imported from SACOG's own pipeline dataset \u2014 the foundation the live feeds build on.",
+      "count": 458,
+      "freshness": "Last refreshed Jun 12, 2026",
+      "detail": "Baseline regional inventory",
+      "recent": [
+        {
+          "name": "Fairfield Mariott hotel (Natomas)",
+          "date": "Jun 12, 2026",
+          "url": ""
+        },
+        {
+          "name": "21st & U st",
+          "date": "Jun 12, 2026",
+          "url": ""
+        },
+        {
+          "name": "3rd & Broadway Apts",
+          "date": "Jun 12, 2026",
+          "url": ""
+        },
+        {
+          "name": "Greenbriar - Community Center",
+          "date": "Jun 12, 2026",
+          "url": ""
+        },
+        {
+          "name": "Greenbriar - Non Res",
+          "date": "Jun 12, 2026",
+          "url": ""
+        },
+        {
+          "name": "Greenbriar - Park",
+          "date": "Jun 12, 2026",
+          "url": ""
+        },
+        {
+          "name": "Greenbriar - Substation",
+          "date": "Jun 12, 2026",
+          "url": ""
+        },
+        {
+          "name": "65th Street Hampton Inn & Suites",
+          "date": "Jun 12, 2026",
+          "url": ""
+        }
+      ]
+    }
+  ]
+}
