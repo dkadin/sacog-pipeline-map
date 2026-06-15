@@ -411,8 +411,14 @@ map.on("load", async () => {
     hoverTip.remove();
   });
   map.on("click", "projects-circles", (e) => {
+    if (Editor.active) return;            // edit mode routes clicks to the editor
     if (e.features[0]) openDetail(e.features[0].properties);
   });
+
+  // Single click router for the local parcel editor (dormant unless the edit
+  // backend is present). Layer click handlers above bail out while Editor.active,
+  // so every click in edit mode funnels through here.
+  map.on("click", (e) => Editor.onMapClick(e));
 
   // ---- Project parcels: real footprints at label zoom (dots take over zoomed out) ----
   try {
@@ -465,6 +471,7 @@ map.on("load", async () => {
         hoverTip.remove();
       });
       map.on("click", "parcels-fill", (e) => {
+        if (Editor.active) return;        // edit mode routes clicks to the editor
         if (e.features[0]) openDetail(e.features[0].properties);
       });
     }
@@ -888,3 +895,321 @@ document.addEventListener("keydown", (e) => {
     closeInputs();
   }
 });
+
+// ============================================================================
+// LOCAL PARCEL EDITOR
+// ----------------------------------------------------------------------------
+// Reassign a project to the correct parcel(s) by clicking them on the map. ONLY
+// active when tools/edit_server.py is serving the site (it answers /api/health);
+// the public GitHub Pages build has no /api backend, so this stays fully dormant
+// there — no toolbar, no behaviour change. Edits write to the live DB and re-
+// export the GeoJSON locally; publishing still means a separate, gated deploy.
+// ============================================================================
+const EMPTY_FC = { type: "FeatureCollection", features: [] };
+
+const Editor = {
+  available: false,   // backend present (only true under edit_server.py)
+  active: false,      // edit mode toggled on
+  editing: false,     // a project is selected; clicks now pick parcels
+  busy: false,        // an async call is in flight (ignore stray clicks)
+  pid: null,
+  name: "",
+  county: "",
+  selection: [],      // [{key, apn, geometry, area_acres}]
+
+  async init() {
+    try {
+      const r = await fetch("/api/health", { cache: "no-store" });
+      if (!r.ok) return;
+      const j = await r.json();
+      if (!j || !j.editor) return;
+    } catch (_) { return; }   // no backend → public site, stay hidden
+    this.available = true;
+    this.injectUI();
+    this.setActive(false);
+  },
+
+  injectUI() {
+    const bar = document.createElement("div");
+    bar.id = "editor-bar";
+    bar.innerHTML =
+      `<button id="ed-toggle" class="ed-btn" type="button"></button>` +
+      `<div id="ed-panel"></div>`;
+    document.body.appendChild(bar);
+    document.getElementById("ed-toggle")
+      .addEventListener("click", () => this.setActive(!this.active));
+    // delegate the panel's action buttons (panel HTML is rebuilt on each render)
+    document.getElementById("ed-panel").addEventListener("click", (e) => {
+      const a = e.target.closest("[data-act]");
+      if (!a) return;
+      ({ save: this.save, clear: this.clear, cancel: this.cancel,
+         reload: this.reloadHere }[a.dataset.act] || (() => {})).call(this);
+    });
+  },
+
+  setActive(on) {
+    this.active = on;
+    document.body.classList.toggle("editing-mode", on);
+    const tog = document.getElementById("ed-toggle");
+    if (tog) {
+      tog.textContent = on ? "Exit edit mode" : "✎ Edit parcels";
+      tog.classList.toggle("on", on);
+    }
+    if (!on) this.finishEditing(true);
+    this.renderToolbar();
+    if (on && !this.editing)
+      setStatus("Edit mode — click a project to reassign its parcel(s).");
+    else if (!on)
+      setStatus(null);
+  },
+
+  // ---- map click router (every click in edit mode lands here) ----
+  onMapClick(e) {
+    if (!this.active || this.busy) return;
+    if (!this.editing) {
+      const layers = ["projects-circles", "parcels-fill"]
+        .filter((id) => map.getLayer(id));
+      const f = map.queryRenderedFeatures(e.point, { layers })[0];
+      if (f) this.selectProject(f, e.lngLat);
+      else setStatus("Click directly on a project dot or parcel to edit it.");
+      return;
+    }
+    this.pickParcelAt(e.lngLat);
+  },
+
+  ensureLayers() {
+    if (map.getSource("edit-selection")) return;
+    map.addSource("edit-current", { type: "geojson", data: EMPTY_FC });
+    map.addSource("edit-selection", { type: "geojson", data: EMPTY_FC });
+    // current footprint: white dashed reference outline of what we're replacing
+    map.addLayer({
+      id: "edit-current-line", type: "line", source: "edit-current",
+      paint: { "line-color": "#ffffff", "line-opacity": 0.7,
+               "line-width": 1.4, "line-dasharray": [2, 2] },
+    });
+    // chosen parcels: bright cyan highlight, drawn on top of everything
+    map.addLayer({
+      id: "edit-selection-fill", type: "fill", source: "edit-selection",
+      paint: { "fill-color": "#00e5ff", "fill-opacity": 0.35 },
+    });
+    map.addLayer({
+      id: "edit-selection-line", type: "line", source: "edit-selection",
+      paint: { "line-color": "#00e5ff", "line-opacity": 0.95, "line-width": 2.2 },
+    });
+  },
+
+  async selectProject(feature, lngLat) {
+    const p = feature.properties || {};
+    const pid = Number(p.project_id);
+    if (!pid) return;
+    this.ensureLayers();
+    this.busy = true;
+    this.editing = true;
+    this.pid = pid;
+    this.name = p.project_name || "(unnamed project)";
+    this.county = p.county || "";
+    this.selection = [];
+    this.setCurrent(null);
+    this.renderSelection();
+    this.renderToolbar();
+    setStatus(`Loading parcels near <b>${esc(this.name)}</b>&hellip;`);
+    try {
+      const res = await this.apiPost("/api/begin_edit",
+        { pid, lon: lngLat.lng, lat: lngLat.lat });
+      this.county = res.county || this.county;
+      this.setCurrent(res.current_geom || null);
+      this.busy = false;
+      this.renderToolbar();
+      if (!res.parcels_loaded) {
+        setStatus("No parcels found right here — pan to the project and click " +
+                  "<b>Reload parcels here</b>.");
+      } else {
+        setStatus(`Editing <b>${esc(this.name)}</b> — click the correct ` +
+                  `parcel(s), then <b>Save</b>. (${fmt(res.parcels_loaded)} ` +
+                  `parcels loaded.)`);
+      }
+    } catch (err) {
+      this.busy = false;
+      this.editing = false;
+      this.pid = null;
+      this.renderToolbar();
+      setStatus(`Couldn't load parcels: ${esc(String(err.message || err))}`);
+    }
+  },
+
+  async pickParcelAt(lngLat) {
+    this.busy = true;
+    try {
+      const res = await this.apiGet(
+        `/api/parcel_at?lat=${lngLat.lat}&lon=${lngLat.lng}`);
+      this.busy = false;
+      if (!res.found) {
+        setStatus("No parcel there. If it's outside the loaded area, pan to it " +
+                  "and click <b>Reload parcels here</b>.");
+        return;
+      }
+      const key = res.apn ? "apn:" + res.apn : "g:" + JSON.stringify(res.geometry);
+      const i = this.selection.findIndex((s) => s.key === key);
+      if (i >= 0) this.selection.splice(i, 1);
+      else this.selection.push({ key, apn: res.apn,
+                                 geometry: res.geometry, area_acres: res.area_acres });
+      this.renderSelection();
+      this.renderToolbar();
+    } catch (err) {
+      this.busy = false;
+      setStatus(`Parcel lookup failed: ${esc(String(err.message || err))}`);
+    }
+  },
+
+  async reloadHere() {
+    if (!this.editing || this.busy) return;
+    this.busy = true;
+    const c = map.getCenter();
+    setStatus("Loading parcels in view&hellip;");
+    try {
+      const res = await this.apiPost("/api/begin_edit",
+        { pid: this.pid, lon: c.lng, lat: c.lat, force: true });
+      this.busy = false;
+      setStatus(`Parcels reloaded (${fmt(res.parcels_loaded)}). Keep clicking ` +
+                `the correct parcel(s).`);
+    } catch (err) {
+      this.busy = false;
+      setStatus(`Reload failed: ${esc(String(err.message || err))}`);
+    }
+  },
+
+  async save() {
+    if (!this.editing || this.busy) return;
+    if (!this.selection.length) {
+      setStatus("Select at least one parcel first, or use <b>Remove footprint</b>.");
+      return;
+    }
+    this.busy = true;
+    setStatus(`Saving <b>${esc(this.name)}</b>&hellip;`);
+    try {
+      const res = await this.apiPost("/api/reassign",
+        { pid: this.pid, geometries: this.selection.map((s) => s.geometry) });
+      const nm = this.name;
+      await this.refreshData();
+      this.finishEditing();
+      setStatus(`Saved <b>${esc(nm)}</b> — ${res.parcel_count} parcel(s), ` +
+                `${res.area_acres} ac. Pick another project, or exit edit mode.`);
+    } catch (err) {
+      this.busy = false;
+      setStatus(`Save failed: ${esc(String(err.message || err))}`);
+    }
+  },
+
+  async clear() {
+    if (!this.editing || this.busy) return;
+    if (!window.confirm(
+        `Remove the parcel footprint for "${this.name}"?\n` +
+        `It will revert to a dot at its geocoded address.`)) return;
+    this.busy = true;
+    setStatus(`Removing footprint for <b>${esc(this.name)}</b>&hellip;`);
+    try {
+      await this.apiPost("/api/clear_geom", { pid: this.pid });
+      const nm = this.name;
+      await this.refreshData();
+      this.finishEditing();
+      setStatus(`Removed footprint for <b>${esc(nm)}</b>.`);
+    } catch (err) {
+      this.busy = false;
+      setStatus(`Remove failed: ${esc(String(err.message || err))}`);
+    }
+  },
+
+  cancel() {
+    if (!this.editing) return;
+    this.finishEditing();
+    setStatus("Edit cancelled — click another project, or exit edit mode.");
+  },
+
+  finishEditing(silent) {
+    this.editing = false;
+    this.busy = false;
+    this.pid = null;
+    this.selection = [];
+    if (map.getSource("edit-selection")) this.setCurrent(null);
+    if (map.getSource("edit-selection"))
+      map.getSource("edit-selection").setData(EMPTY_FC);
+    if (!silent) this.renderToolbar();
+  },
+
+  setCurrent(geom) {
+    if (!map.getSource("edit-current")) return;
+    map.getSource("edit-current").setData(
+      geom ? { type: "FeatureCollection",
+               features: [{ type: "Feature", geometry: geom, properties: {} }] }
+           : EMPTY_FC);
+  },
+
+  renderSelection() {
+    if (!map.getSource("edit-selection")) return;
+    map.getSource("edit-selection").setData({
+      type: "FeatureCollection",
+      features: this.selection.map((s) => ({
+        type: "Feature", geometry: s.geometry, properties: {} })),
+    });
+  },
+
+  renderToolbar() {
+    const panel = document.getElementById("ed-panel");
+    if (!panel) return;
+    if (!this.active) { panel.innerHTML = ""; panel.hidden = true; return; }
+    panel.hidden = false;
+    if (!this.editing) {
+      panel.innerHTML =
+        `<div class="ed-hint">Click a project dot or parcel on the map to ` +
+        `reassign its footprint.</div>`;
+      return;
+    }
+    const n = this.selection.length;
+    const ac = this.selection.reduce((t, s) => t + (s.area_acres || 0), 0);
+    panel.innerHTML =
+      `<div class="ed-proj">${esc(this.name)}` +
+        `<span class="ed-county">${esc(this.county)}</span></div>` +
+      `<div class="ed-stats">${n} parcel${n === 1 ? "" : "s"} selected` +
+        (n ? ` &middot; ${ac.toFixed(2)} ac` : "") + `</div>` +
+      `<div class="ed-actions">` +
+        `<button class="ed-act ed-save" data-act="save"${n ? "" : " disabled"}>Save</button>` +
+        `<button class="ed-act" data-act="reload">Reload parcels here</button>` +
+        `<button class="ed-act ed-danger" data-act="clear">Remove footprint</button>` +
+        `<button class="ed-act" data-act="cancel">Cancel</button>` +
+      `</div>` +
+      `<div class="ed-hint">Click parcels to add/remove them. White dashed = ` +
+        `current footprint.</div>`;
+  },
+
+  async refreshData() {
+    const [pj, pc] = await Promise.all([
+      fetch("data/pipeline.geojson", { cache: "no-cache" }).then((r) => r.json()),
+      fetch("data/pipeline_parcels.geojson", { cache: "no-cache" }).then((r) => r.json()),
+    ]);
+    if (map.getSource("projects")) map.getSource("projects").setData(pj);
+    if (map.getSource("parcels")) map.getSource("parcels").setData(pc);
+    if (pj.metrics) renderMetrics(pj.metrics);
+    inputsData = null;   // force the Inputs dashboard to re-fetch next open
+  },
+
+  async apiGet(path) {
+    const r = await fetch(path, { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    return r.json();
+  },
+  async apiPost(path, body) {
+    const r = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      let msg;
+      try { msg = (await r.json()).error; } catch (_) { /* ignore */ }
+      throw new Error(msg || r.status);
+    }
+    return r.json();
+  },
+};
+
+Editor.init();
