@@ -17,12 +17,12 @@ const BUCKET_LABELS = {
 };
 
 // Historical housing-permit overlay: net-new units sized by circle, year-finaled
-// by colour. A light→dark cyan→indigo gradient (chosen to be distinct from the
-// pipeline yellow/purple/red), so older permits read pale and newer ones deep.
+// by colour. A dark→light indigo→cyan gradient (chosen to be distinct from the
+// pipeline yellow/purple/red), so older permits read deep and newer ones pale.
 const PERMIT_COLORS = {
-  early: "#7dd3fc", // 2001–2008 (light sky)
+  early: "#1a237e", // 2001–2008 (deep indigo)
   mid:   "#2f80ed", // 2009–2019 (mid blue)
-  late:  "#1a237e", // 2020–2025 (deep indigo)
+  late:  "#7dd3fc", // 2020–2025 (light sky)
 };
 const PERMIT_BUCKETS = ["early", "mid", "late"];
 
@@ -818,9 +818,8 @@ function inputItem(it) {
 }
 
 function feedItem(f) {
-  const meta = f.count + (f.last ? " · " + esc(f.last) : "");
   return `<li class="src-feed"><a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.name)} ↗</a>`
-       + `<span class="src-feed-meta">${meta}</span></li>`;
+       + `<span class="src-feed-meta">${fmt(f.count)}</span></li>`;
 }
 
 function inputsCardHTML(c) {

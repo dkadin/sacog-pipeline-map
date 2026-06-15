@@ -260,16 +260,18 @@ table.detail-table a:hover { text-decoration: underline; }
 /* ---- Pipeline Inputs button (in-flow, inside the rankings panel) ---- */
 #inputs-btn {
   display: block; width: 100%; box-sizing: border-box;
-  margin-top: 12px; padding: 9px 11px;
-  text-align: left; cursor: pointer; color: var(--text);
+  margin-top: 14px; padding: 11px 13px;
+  text-align: left; cursor: pointer; color: #fff;
   font-family: inherit;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--panel-border); border-radius: 9px;
-  transition: border-color 0.15s, background 0.15s;
+  background: linear-gradient(135deg, var(--accent), #1f5fd8);
+  border: 1px solid rgba(120,170,255,0.55); border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(47,123,255,0.35);
+  transition: filter 0.15s, box-shadow 0.15s, transform 0.05s;
 }
-#inputs-btn:hover { border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.09); }
-.inputs-btn-title { display: block; font-size: 13.5px; font-weight: 700; letter-spacing: 0.2px; }
-.inputs-btn-sub { display: block; font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+#inputs-btn:hover { filter: brightness(1.1); box-shadow: 0 3px 16px rgba(47,123,255,0.5); }
+#inputs-btn:active { transform: translateY(1px); }
+.inputs-btn-title { display: block; font-size: 15px; font-weight: 800; letter-spacing: 0.2px; }
+.inputs-btn-sub { display: block; font-size: 11.5px; color: rgba(255,255,255,0.85); margin-top: 2px; }
 
 /* ---- Pipeline Inputs full-page dashboard ---- */
 #inputs-overlay {
@@ -281,7 +283,7 @@ table.detail-table a:hover { text-decoration: underline; }
 }
 #inputs-overlay.open { display: flex; }
 #inputs-panel {
-  width: 100%; max-width: 1120px; margin: auto;
+  width: 100%; max-width: 1640px; margin: auto;
   background: var(--panel-bg); border: 1px solid var(--panel-border);
   border-radius: 16px; box-shadow: 0 12px 48px rgba(0,0,0,0.6);
   padding: 22px 24px 26px;
@@ -302,8 +304,11 @@ table.detail-table a:hover { text-decoration: underline; }
 
 #inputs-grid {
   display: grid; gap: 14px;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: start;
+}
+@media (max-width: 1200px) {
+  #inputs-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 }
 
 .src-card {
