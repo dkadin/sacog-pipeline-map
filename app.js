@@ -411,13 +411,14 @@ map.on("load", async () => {
     hoverTip.remove();
   });
   map.on("click", "projects-circles", (e) => {
-    if (Editor.active) return;            // edit mode routes clicks to the editor
-    if (e.features[0]) openDetail(e.features[0].properties);
+    if (Editor.editing) return;          // editing routes clicks to parcel-picking
+    const f = e.features[0];
+    if (f) openDetail(f.properties, pointOf(f, e.lngLat));
   });
 
   // Single click router for the local parcel editor (dormant unless the edit
-  // backend is present). Layer click handlers above bail out while Editor.active,
-  // so every click in edit mode funnels through here.
+  // backend is present + a project is open in edit mode). Layer click handlers
+  // above bail out while Editor.editing, so every edit-mode click funnels here.
   map.on("click", (e) => Editor.onMapClick(e));
 
   // ---- Project parcels: real footprints at label zoom (dots take over zoomed out) ----
@@ -471,8 +472,8 @@ map.on("load", async () => {
         hoverTip.remove();
       });
       map.on("click", "parcels-fill", (e) => {
-        if (Editor.active) return;        // edit mode routes clicks to the editor
-        if (e.features[0]) openDetail(e.features[0].properties);
+        if (Editor.editing) return;       // editing routes clicks to parcel-picking
+        if (e.features[0]) openDetail(e.features[0].properties, e.lngLat);
       });
     }
   } catch (e) { /* parcels optional; dots still work without them */ }
@@ -516,6 +517,27 @@ function esc(s) {
 }
 function hasVal(v) { return v !== null && v !== undefined && String(v).trim() !== ""; }
 
+// Best click point for a feature: a Point's own coordinates (exact project point)
+// else the raw click location. Used to seed the parcel editor's window load.
+function pointOf(f, lngLat) {
+  const g = f && f.geometry;
+  if (g && g.type === "Point" && g.coordinates)
+    return { lng: g.coordinates[0], lat: g.coordinates[1] };
+  return lngLat || null;
+}
+
+// The project currently shown in the sidebar — its properties + the point we
+// opened it from. The parcel editor reads this when "Edit parcels" is clicked.
+let detailCtx = null;
+
+function closeDetail() {
+  if (Editor.editing) Editor.endEdit();
+  const panel = document.getElementById("detail");
+  panel.classList.remove("open");
+  panel.setAttribute("aria-hidden", "true");
+  detailCtx = null;
+}
+
 // Build the "Source" cell from the classified provenance.
 function sourceRow(p) {
   const type = p.source_type;
@@ -529,7 +551,8 @@ function sourceRow(p) {
   return esc(label || "—");
 }
 
-function openDetail(p) {
+function openDetail(p, lngLat) {
+  detailCtx = { p, lngLat: lngLat || null };
   const bucket = p.color_bucket;
   const chipColor = BUCKET_COLORS[bucket] || "#9aa0a6";
   const metricVal = p.label_metric_value;
@@ -560,16 +583,29 @@ function openDetail(p) {
   if (srcRow) html += `<tr><th>Source</th><td>${srcRow}</td></tr>`;
   html += `</table>`;
 
+  // Local-only editor controls at the bottom of the sidebar (dormant on the
+  // public build, where Editor.available stays false).
+  if (Editor.available) html += Editor.footerHTML();
+
   document.getElementById("detail-body").innerHTML = html;
   const panel = document.getElementById("detail");
   panel.classList.add("open");
   panel.setAttribute("aria-hidden", "false");
 }
 
-document.getElementById("detail-close").addEventListener("click", () => {
-  const panel = document.getElementById("detail");
-  panel.classList.remove("open");
-  panel.setAttribute("aria-hidden", "true");
+document.getElementById("detail-close").addEventListener("click", closeDetail);
+
+// One delegated handler for every editor button rendered inside the sidebar
+// (the footer's Edit/Delete and the edit panel's Save/Reload/Remove/Cancel).
+document.getElementById("detail").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-ed-act]");
+  if (!b) return;
+  const fn = {
+    edit: Editor.beginEdit, delete: Editor.deleteProject,
+    save: Editor.save, reload: Editor.reloadHere,
+    clearfoot: Editor.clear, cancel: Editor.cancel,
+  }[b.dataset.edAct];
+  if (fn) fn.call(Editor);
 });
 
 // ---- Overlay layers (loaded on demand; semi-transparent; beneath the points) ----
@@ -909,13 +945,13 @@ const EMPTY_FC = { type: "FeatureCollection", features: [] };
 
 const Editor = {
   available: false,   // backend present (only true under edit_server.py)
-  active: false,      // edit mode toggled on
-  editing: false,     // a project is selected; clicks now pick parcels
+  editing: false,     // a project is open in parcel-pick mode
   busy: false,        // an async call is in flight (ignore stray clicks)
   pid: null,
   name: "",
   county: "",
   selection: [],      // [{key, apn, geometry, area_acres}]
+  ctx: null,          // detailCtx snapshot, so Cancel can restore the detail view
 
   async init() {
     try {
@@ -925,67 +961,37 @@ const Editor = {
       if (!j || !j.editor) return;
     } catch (_) { return; }   // no backend → public site, stay hidden
     this.available = true;
-    this.injectUI();
-    this.setActive(false);
   },
 
-  injectUI() {
-    const bar = document.createElement("div");
-    bar.id = "editor-bar";
-    bar.innerHTML =
-      `<button id="ed-toggle" class="ed-btn" type="button"></button>` +
-      `<div id="ed-panel"></div>`;
-    document.body.appendChild(bar);
-    document.getElementById("ed-toggle")
-      .addEventListener("click", () => this.setActive(!this.active));
-    // delegate the panel's action buttons (panel HTML is rebuilt on each render)
-    document.getElementById("ed-panel").addEventListener("click", (e) => {
-      const a = e.target.closest("[data-act]");
-      if (!a) return;
-      ({ save: this.save, clear: this.clear, cancel: this.cancel,
-         reload: this.reloadHere }[a.dataset.act] || (() => {})).call(this);
-    });
+  // ---- footer shown at the bottom of every project's detail sidebar ----
+  footerHTML() {
+    return `<div class="ed-foot">` +
+      `<button class="ed-btn" data-ed-act="edit">✎ Edit parcels</button>` +
+      `<button class="ed-btn ed-foot-del" data-ed-act="delete">Delete project</button>` +
+      `</div>`;
   },
 
-  setActive(on) {
-    this.active = on;
-    document.body.classList.toggle("editing-mode", on);
-    const tog = document.getElementById("ed-toggle");
-    if (tog) {
-      tog.textContent = on ? "Exit edit mode" : "✎ Edit parcels";
-      tog.classList.toggle("on", on);
-    }
-    if (!on) this.finishEditing(true);
-    this.renderToolbar();
-    if (on && !this.editing)
-      setStatus("Edit mode — click a project to reassign its parcel(s).");
-    else if (!on)
-      setStatus(null);
-  },
-
-  // ---- map click router (every click in edit mode lands here) ----
+  // ---- map click router (only fires while a project is open in edit mode) ----
   onMapClick(e) {
-    if (!this.active || this.busy) return;
-    if (!this.editing) {
-      const layers = ["projects-circles", "parcels-fill"]
-        .filter((id) => map.getLayer(id));
-      const f = map.queryRenderedFeatures(e.point, { layers })[0];
-      if (f) this.selectProject(f, e.lngLat);
-      else setStatus("Click directly on a project dot or parcel to edit it.");
-      return;
-    }
+    if (!this.editing || this.busy) return;
     this.pickParcelAt(e.lngLat);
   },
 
   ensureLayers() {
     if (map.getSource("edit-selection")) return;
+    map.addSource("edit-window", { type: "geojson", data: EMPTY_FC });
     map.addSource("edit-current", { type: "geojson", data: EMPTY_FC });
     map.addSource("edit-selection", { type: "geojson", data: EMPTY_FC });
+    // all loaded parcels: faint blue outlines so every clickable parcel is visible
+    map.addLayer({
+      id: "edit-window-line", type: "line", source: "edit-window",
+      paint: { "line-color": "#9ad7ff", "line-opacity": 0.3, "line-width": 0.7 },
+    });
     // current footprint: white dashed reference outline of what we're replacing
     map.addLayer({
       id: "edit-current-line", type: "line", source: "edit-current",
-      paint: { "line-color": "#ffffff", "line-opacity": 0.7,
-               "line-width": 1.4, "line-dasharray": [2, 2] },
+      paint: { "line-color": "#ffffff", "line-opacity": 0.75,
+               "line-width": 1.6, "line-dasharray": [2, 2] },
     });
     // chosen parcels: bright cyan highlight, drawn on top of everything
     map.addLayer({
@@ -998,10 +1004,16 @@ const Editor = {
     });
   },
 
-  async selectProject(feature, lngLat) {
-    const p = feature.properties || {};
+  // "Edit parcels" in the sidebar → enter parcel-pick mode for the open project.
+  async beginEdit() {
+    if (!detailCtx || this.busy) return;
+    const p = detailCtx.p;
     const pid = Number(p.project_id);
-    if (!pid) return;
+    const ll = detailCtx.lngLat;
+    if (!pid || !ll) {
+      setStatus("Couldn't locate this project on the map to edit it.");
+      return;
+    }
     this.ensureLayers();
     this.busy = true;
     this.editing = true;
@@ -1009,32 +1021,42 @@ const Editor = {
     this.name = p.project_name || "(unnamed project)";
     this.county = p.county || "";
     this.selection = [];
+    this.ctx = detailCtx;
+    document.body.classList.add("editing-mode");
     this.setCurrent(null);
     this.renderSelection();
-    this.renderToolbar();
+    this.renderEditPanel();
     setStatus(`Loading parcels near <b>${esc(this.name)}</b>&hellip;`);
     try {
       const res = await this.apiPost("/api/begin_edit",
-        { pid, lon: lngLat.lng, lat: lngLat.lat });
+        { pid, lon: ll.lng, lat: ll.lat });
       this.county = res.county || this.county;
       this.setCurrent(res.current_geom || null);
+      await this.loadWindowOutlines();
       this.busy = false;
-      this.renderToolbar();
+      this.renderEditPanel();
       if (!res.parcels_loaded) {
-        setStatus("No parcels found right here — pan to the project and click " +
+        setStatus("No parcels loaded right here — pan to the project and click " +
                   "<b>Reload parcels here</b>.");
       } else {
         setStatus(`Editing <b>${esc(this.name)}</b> — click the correct ` +
-                  `parcel(s), then <b>Save</b>. (${fmt(res.parcels_loaded)} ` +
-                  `parcels loaded.)`);
+                  `parcel(s), then <b>Save footprint</b>. ` +
+                  `(${fmt(res.parcels_loaded)} parcels shown.)`);
       }
     } catch (err) {
       this.busy = false;
-      this.editing = false;
-      this.pid = null;
-      this.renderToolbar();
+      this.endEdit();
+      if (this.ctx) openDetail(this.ctx.p, this.ctx.lngLat);
       setStatus(`Couldn't load parcels: ${esc(String(err.message || err))}`);
     }
+  },
+
+  // Outline every parcel in the loaded window so the user sees what's clickable.
+  async loadWindowOutlines() {
+    try {
+      const fc = await this.apiGet("/api/window_parcels");
+      if (map.getSource("edit-window")) map.getSource("edit-window").setData(fc);
+    } catch (_) { /* outlines are a nicety; picking still works without them */ }
   },
 
   async pickParcelAt(lngLat) {
@@ -1054,7 +1076,7 @@ const Editor = {
       else this.selection.push({ key, apn: res.apn,
                                  geometry: res.geometry, area_acres: res.area_acres });
       this.renderSelection();
-      this.renderToolbar();
+      this.renderEditPanel();
     } catch (err) {
       this.busy = false;
       setStatus(`Parcel lookup failed: ${esc(String(err.message || err))}`);
@@ -1069,6 +1091,7 @@ const Editor = {
     try {
       const res = await this.apiPost("/api/begin_edit",
         { pid: this.pid, lon: c.lng, lat: c.lat, force: true });
+      await this.loadWindowOutlines();
       this.busy = false;
       setStatus(`Parcels reloaded (${fmt(res.parcels_loaded)}). Keep clicking ` +
                 `the correct parcel(s).`);
@@ -1089,11 +1112,12 @@ const Editor = {
     try {
       const res = await this.apiPost("/api/reassign",
         { pid: this.pid, geometries: this.selection.map((s) => s.geometry) });
-      const nm = this.name;
+      const pid = this.pid, nm = this.name;
+      this.endEdit();
       await this.refreshData();
-      this.finishEditing();
+      this.reopenDetail(pid);
       setStatus(`Saved <b>${esc(nm)}</b> — ${res.parcel_count} parcel(s), ` +
-                `${res.area_acres} ac. Pick another project, or exit edit mode.`);
+                `${res.area_acres} ac. Remaining units updated.`);
     } catch (err) {
       this.busy = false;
       setStatus(`Save failed: ${esc(String(err.message || err))}`);
@@ -1108,10 +1132,11 @@ const Editor = {
     this.busy = true;
     setStatus(`Removing footprint for <b>${esc(this.name)}</b>&hellip;`);
     try {
-      await this.apiPost("/api/clear_geom", { pid: this.pid });
-      const nm = this.name;
+      const pid = this.pid, nm = this.name;
+      await this.apiPost("/api/clear_geom", { pid });
+      this.endEdit();
       await this.refreshData();
-      this.finishEditing();
+      this.reopenDetail(pid);
       setStatus(`Removed footprint for <b>${esc(nm)}</b>.`);
     } catch (err) {
       this.busy = false;
@@ -1119,21 +1144,53 @@ const Editor = {
     }
   },
 
-  cancel() {
-    if (!this.editing) return;
-    this.finishEditing();
-    setStatus("Edit cancelled — click another project, or exit edit mode.");
+  // "Delete project" → permanent, irreversible hard delete (double-confirmed).
+  async deleteProject() {
+    if (!detailCtx || this.busy) return;
+    const p = detailCtx.p;
+    const pid = Number(p.project_id);
+    const nm = p.project_name || "(unnamed project)";
+    if (!pid) return;
+    if (!window.confirm(
+        `Permanently delete "${nm}" from the database?\n\n` +
+        `This removes the project, its parcel footprint, and its version ` +
+        `history. It CANNOT be undone.`)) return;
+    if (!window.confirm(`Last check — "${nm}" will be gone for good. Delete it?`))
+      return;
+    this.busy = true;
+    setStatus(`Deleting <b>${esc(nm)}</b>&hellip;`);
+    try {
+      await this.apiPost("/api/delete_project", { pid });
+      this.endEdit();
+      await this.refreshData();
+      closeDetail();
+      setStatus(`Deleted <b>${esc(nm)}</b> from the database.`);
+    } catch (err) {
+      this.busy = false;
+      setStatus(`Delete failed: ${esc(String(err.message || err))}`);
+    }
   },
 
-  finishEditing(silent) {
+  // Cancel parcel editing and return to the project's normal detail view.
+  cancel() {
+    if (!this.editing) return;
+    const ctx = this.ctx;
+    this.endEdit();
+    if (ctx) openDetail(ctx.p, ctx.lngLat);
+    setStatus(null);
+  },
+
+  // Tear down edit state + clear all edit overlays from the map.
+  endEdit() {
     this.editing = false;
     this.busy = false;
     this.pid = null;
     this.selection = [];
-    if (map.getSource("edit-selection")) this.setCurrent(null);
-    if (map.getSource("edit-selection"))
-      map.getSource("edit-selection").setData(EMPTY_FC);
-    if (!silent) this.renderToolbar();
+    this.ctx = null;
+    document.body.classList.remove("editing-mode");
+    for (const s of ["edit-window", "edit-current", "edit-selection"]) {
+      if (map.getSource(s)) map.getSource(s).setData(EMPTY_FC);
+    }
   },
 
   setCurrent(geom) {
@@ -1153,32 +1210,38 @@ const Editor = {
     });
   },
 
-  renderToolbar() {
-    const panel = document.getElementById("ed-panel");
-    if (!panel) return;
-    if (!this.active) { panel.innerHTML = ""; panel.hidden = true; return; }
-    panel.hidden = false;
-    if (!this.editing) {
-      panel.innerHTML =
-        `<div class="ed-hint">Click a project dot or parcel on the map to ` +
-        `reassign its footprint.</div>`;
-      return;
-    }
+  // Render the parcel-pick controls into the detail sidebar body.
+  renderEditPanel() {
+    const body = document.getElementById("detail-body");
+    if (!body) return;
     const n = this.selection.length;
     const ac = this.selection.reduce((t, s) => t + (s.area_acres || 0), 0);
-    panel.innerHTML =
-      `<div class="ed-proj">${esc(this.name)}` +
-        `<span class="ed-county">${esc(this.county)}</span></div>` +
+    body.innerHTML =
+      `<span class="detail-chip" style="background:#00b3c6">Editing parcels</span>` +
+      `<div class="detail-name">${esc(this.name)}</div>` +
+      `<div class="detail-sub">${esc(this.county ? this.county + " County" : "")}</div>` +
       `<div class="ed-stats">${n} parcel${n === 1 ? "" : "s"} selected` +
         (n ? ` &middot; ${ac.toFixed(2)} ac` : "") + `</div>` +
       `<div class="ed-actions">` +
-        `<button class="ed-act ed-save" data-act="save"${n ? "" : " disabled"}>Save</button>` +
-        `<button class="ed-act" data-act="reload">Reload parcels here</button>` +
-        `<button class="ed-act ed-danger" data-act="clear">Remove footprint</button>` +
-        `<button class="ed-act" data-act="cancel">Cancel</button>` +
+        `<button class="ed-act ed-save" data-ed-act="save"${n ? "" : " disabled"}>Save footprint</button>` +
+        `<button class="ed-act" data-ed-act="reload">Reload parcels here</button>` +
+        `<button class="ed-act ed-danger" data-ed-act="clearfoot">Remove footprint</button>` +
+        `<button class="ed-act" data-ed-act="cancel">Cancel</button>` +
       `</div>` +
-      `<div class="ed-hint">Click parcels to add/remove them. White dashed = ` +
-        `current footprint.</div>`;
+      `<div class="ed-hint">Click parcels on the map to add/remove them.<br>` +
+        `<span style="color:#9ad7ff">Faint blue</span> = all parcels &middot; ` +
+        `<span style="color:#fff">white dashed</span> = current footprint &middot; ` +
+        `<span style="color:#00e5ff">cyan</span> = your selection.</div>`;
+  },
+
+  // Re-open the sidebar for a project from the freshly re-exported data, so the
+  // user sees the new footprint/units immediately after a save or footprint clear.
+  reopenDetail(pid) {
+    const src = map.getSource("projects");
+    const data = src && src._data;
+    const f = data && (data.features || []).find(
+      (x) => Number(x.properties.project_id) === Number(pid));
+    if (f) openDetail(f.properties, pointOf(f, null));
   },
 
   async refreshData() {

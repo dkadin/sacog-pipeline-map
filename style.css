@@ -384,47 +384,36 @@ table.detail-table a:hover { text-decoration: underline; }
   #inputs-header h2 { font-size: 18px; }
 }
 
-/* ---- Local parcel editor (injected by app.js ONLY when tools/edit_server.py
-       is serving; the public GitHub Pages build never renders these) ---- */
-#editor-bar {
-  position: fixed; z-index: 12; top: 70px; left: 50%;
-  transform: translateX(-50%);
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  width: min(440px, calc(100vw - 32px));
+/* ---- Local parcel editor (rendered INSIDE the project sidebar, ONLY when
+       tools/edit_server.py is serving; the public GitHub Pages build, where
+       Editor.available stays false, never shows any of this) ---- */
+/* Footer at the bottom of a project's detail card: Edit parcels / Delete */
+.ed-foot {
+  margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid var(--panel-border);
+  display: flex; flex-wrap: wrap; gap: 8px;
 }
 .ed-btn {
-  font-family: inherit; cursor: pointer; color: #fff;
-  padding: 8px 18px; border-radius: 999px; font-size: 13px; font-weight: 700;
+  font-family: inherit; cursor: pointer; color: #fff; flex: 1 1 auto;
+  padding: 9px 14px; border-radius: 9px; font-size: 13px; font-weight: 700;
   letter-spacing: 0.2px;
   background: linear-gradient(135deg, #00b3c6, #0079a8);
   border: 1px solid rgba(120,220,255,0.55);
-  box-shadow: 0 2px 12px rgba(0,180,210,0.4);
   transition: filter 0.15s, transform 0.05s;
 }
 .ed-btn:hover { filter: brightness(1.1); }
 .ed-btn:active { transform: translateY(1px); }
-.ed-btn.on {
-  background: linear-gradient(135deg, #ff7a59, #e3502f);
-  border-color: rgba(255,170,140,0.6);
-  box-shadow: 0 2px 12px rgba(227,80,47,0.4);
+.ed-foot-del {
+  flex: 0 0 auto; background: none; color: #ff6b5e;
+  border: 1px solid rgba(255,90,80,0.45);
 }
-#ed-panel {
-  width: 100%; box-sizing: border-box; color: var(--text);
-  background: var(--panel-bg); border: 1px solid var(--panel-border);
-  border-radius: 12px; padding: 12px 14px;
-  box-shadow: 0 8px 28px rgba(0,0,0,0.5);
-}
-#ed-panel[hidden] { display: none; }
-.ed-proj {
-  font-size: 14px; font-weight: 700;
-  display: flex; justify-content: space-between; gap: 10px; align-items: baseline;
-}
-.ed-county { font-size: 11px; color: var(--text-dim); font-weight: 500; white-space: nowrap; }
-.ed-stats { font-size: 12px; color: #00e5ff; margin-top: 3px; font-weight: 600; }
+.ed-foot-del:hover { background: rgba(255,90,80,0.12); filter: none; }
+/* Parcel-pick controls (rendered into the detail body during editing) */
+.ed-stats { font-size: 12.5px; color: #00e5ff; margin: 12px 0 2px; font-weight: 700; }
 .ed-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .ed-act {
   font-family: inherit; cursor: pointer; font-size: 12px;
-  padding: 6px 10px; border-radius: 8px; color: var(--text);
+  padding: 7px 11px; border-radius: 8px; color: var(--text);
   background: rgba(255,255,255,0.06); border: 1px solid var(--panel-border);
   transition: background 0.15s;
 }
@@ -436,7 +425,7 @@ table.detail-table a:hover { text-decoration: underline; }
 }
 .ed-act.ed-save[disabled] { background: rgba(47,123,255,0.35); }
 .ed-act.ed-danger { color: #ff6b5e; border-color: rgba(255,90,80,0.4); }
-.ed-hint { font-size: 11px; color: var(--text-dim); margin-top: 8px; line-height: 1.35; }
+.ed-hint { font-size: 11px; color: var(--text-dim); margin-top: 10px; line-height: 1.4; }
 
 /* keep edit-mode instructions out of the parcel-clicking zone */
 body.editing-mode #status-msg { top: auto; bottom: 28px; }
