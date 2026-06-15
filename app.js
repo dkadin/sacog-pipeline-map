@@ -531,11 +531,13 @@ function pointOf(f, lngLat) {
 let detailCtx = null;
 
 function closeDetail() {
-  if (Editor.editing) Editor.endEdit();
+  const wasEditing = Editor.editing;
+  if (wasEditing) Editor.endEdit();
   const panel = document.getElementById("detail");
   panel.classList.remove("open");
   panel.setAttribute("aria-hidden", "true");
   detailCtx = null;
+  if (wasEditing) setStatus(null);   // clear the lingering edit status message
 }
 
 // Build the "Source" cell from the classified provenance.
@@ -926,9 +928,13 @@ document.getElementById("inputs-overlay").addEventListener("click", (e) => {
   if (e.target.id === "inputs-overlay") closeInputs();   // click the dimmed backdrop
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" &&
-      document.getElementById("inputs-overlay").classList.contains("open")) {
+  if (e.key !== "Escape") return;
+  if (document.getElementById("inputs-overlay").classList.contains("open")) {
     closeInputs();
+  } else if (Editor.editing && !Editor.busy) {
+    Editor.cancel();   // leave edit-parcel mode, back to the project detail view
+  } else if (document.getElementById("detail").classList.contains("open")) {
+    closeDetail();     // a second Escape (or when just viewing) closes the sidebar
   }
 });
 
