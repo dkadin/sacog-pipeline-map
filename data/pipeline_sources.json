@@ -1,6 +1,6 @@
 {
-  "generated_at": "Jun 15, 2026",
-  "total": 835,
+  "generated_at": "Jun 23, 2026",
+  "total": 836,
   "cards": [
     {
       "key": "agenda",
@@ -192,10 +192,15 @@
       "key": "news",
       "title": "News Coverage",
       "blurb": "Development reporting \u2014 chiefly the Sacramento Business Journal \u2014 forwarded and logged for projects not yet in an agenda or tracker.",
-      "count": 117,
-      "freshness": "Last article Jun 12, 2026",
+      "count": 118,
+      "freshness": "Last article Jun 22, 2026",
       "detail": "",
       "recent": [
+        {
+          "name": "Placer Creek",
+          "date": "Jun 22, 2026",
+          "url": ""
+        },
         {
           "name": "The Refuge",
           "date": "Jun 12, 2026",
@@ -228,11 +233,6 @@
         },
         {
           "name": "13C (1300 C St)",
-          "date": "May 12, 2026",
-          "url": "https://www.bizjournals.com/sacramento/news/2026/05/12/downtown-sacramento-construction-projects.html"
-        },
-        {
-          "name": "Central Sacramento Studios Phase II",
           "date": "May 12, 2026",
           "url": "https://www.bizjournals.com/sacramento/news/2026/05/12/downtown-sacramento-construction-projects.html"
         }
