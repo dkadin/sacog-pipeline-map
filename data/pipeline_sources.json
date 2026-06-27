@@ -1,6 +1,6 @@
 {
-  "generated_at": "Jun 23, 2026",
-  "total": 836,
+  "generated_at": "Jun 27, 2026",
+  "total": 837,
   "cards": [
     {
       "key": "agenda",
@@ -56,9 +56,9 @@
       "key": "tracker",
       "title": "Local Development Trackers",
       "blurb": "Jurisdiction-run project lists and development maps, checked for new and updated projects. Working links below.",
-      "count": 151,
-      "freshness": "15 jurisdiction feeds",
-      "detail": "last pulled Jun 12, 2026",
+      "count": 152,
+      "freshness": "16 jurisdiction feeds",
+      "detail": "last pulled Jun 27, 2026",
       "recent": [],
       "feeds": [
         {
@@ -134,6 +134,11 @@
         {
           "name": "City of Wheatland Community Development - Plans & Projects",
           "url": "https://www.wheatland.ca.gov/community-development/page/other-projects-downloads",
+          "count": 1
+        },
+        {
+          "name": "Onsite Observer: Lincoln Planning Commission backs 165-home Windsor Cove subdivision",
+          "url": "https://www.onsiteobserver.com/lincoln-planning-commission-backs-165-home-windsor-cove-subdivision/",
           "count": 1
         }
       ]
