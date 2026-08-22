@@ -1,12 +1,12 @@
 {
-  "generated_at": "Jun 28, 2026",
-  "total": 941,
+  "generated_at": "Aug 22, 2026",
+  "total": 951,
   "cards": [
     {
       "key": "agenda",
       "title": "Agendas & Staff Reports",
       "blurb": "Planning Commission, City Council and Board of Supervisors agendas across the region, crawled for new projects and linked to the actual staff report.",
-      "count": 94,
+      "count": 93,
       "freshness": "Crawled Jan 5, 2026 \u2013 Jun 11, 2026",
       "detail": "46 bodies \u00b7 last run Jun 4, 2026",
       "recent": [
@@ -57,8 +57,8 @@
       "title": "Local Development Trackers",
       "blurb": "Jurisdiction-run project lists and development maps, checked for new and updated projects. Working links below.",
       "count": 214,
-      "freshness": "20 jurisdiction feeds",
-      "detail": "last pulled Jun 27, 2026",
+      "freshness": "21 jurisdiction feeds",
+      "detail": "last pulled Aug 22, 2026",
       "recent": [],
       "feeds": [
         {
@@ -134,7 +134,7 @@
         {
           "name": "Rancho Cordova Major Developments and Projects",
           "url": "https://www.cityofranchocordova.org/departments/community-development/planning/major-developments-and-projects",
-          "count": 3
+          "count": 2
         },
         {
           "name": "City of Citrus Heights \u2014 Planning Projects Viewer",
@@ -159,6 +159,11 @@
         {
           "name": "Onsite Observer: Folsom approves major Kaiser expansion with 24-hour urgent care near Palladio",
           "url": "https://www.onsiteobserver.com/folsom-approves-major-kaiser-expansion-with-24-hour-urgent-care-near-palladio/",
+          "count": 1
+        },
+        {
+          "name": "Sacramento County Planning Application Distribution",
+          "url": "http://www.planningdocuments.saccounty.net/ViewProjectDetails.aspx?ControlNum=DRCP2026-00058",
           "count": 1
         }
       ]
@@ -217,49 +222,49 @@
       "key": "news",
       "title": "News Coverage",
       "blurb": "Development reporting \u2014 chiefly the Sacramento Business Journal \u2014 forwarded and logged for projects not yet in an agenda or tracker.",
-      "count": 125,
-      "freshness": "Last article Jun 25, 2026",
+      "count": 136,
+      "freshness": "Last article Aug 13, 2026",
       "detail": "",
       "recent": [
         {
-          "name": "Roseville Station",
-          "date": "Jun 25, 2026",
-          "url": "https://www.bizjournals.com/sacramento/news/2026/06/25/roseville-station-justus-enterprises.html"
+          "name": "Sports Dr Industrial Buildings",
+          "date": "Aug 13, 2026",
+          "url": "http://www.planningdocuments.saccounty.net/ViewProjectDetails.aspx?ControlNum=DRCP2026-00072"
         },
         {
-          "name": "Placer Creek",
-          "date": "Jun 22, 2026",
+          "name": "Waterfront Hotel in Hood",
+          "date": "Aug 13, 2026",
+          "url": "http://www.planningdocuments.saccounty.net/ViewProjectDetails.aspx?ControlNum=PLNP2025-00037"
+        },
+        {
+          "name": "Pomegranate Ave Residences",
+          "date": "Aug 13, 2026",
+          "url": "http://www.planningdocuments.saccounty.net/ViewProjectDetails.aspx?ControlNum=DRCP2026-00069"
+        },
+        {
+          "name": "Fair Oaks Apartments",
+          "date": "Aug 13, 2026",
+          "url": "http://www.planningdocuments.saccounty.net/ViewProjectDetails.aspx?ControlNum=DRCP2026-00064"
+        },
+        {
+          "name": "Element Hotel",
+          "date": "Aug 10, 2026",
+          "url": "https://www.bizjournals.com/sacramento/news/2026/07/22/element-hotel-stockton-boulevard-construction.html"
+        },
+        {
+          "name": "460 Bowman TM and SPDR",
+          "date": "Aug 10, 2026",
           "url": ""
         },
         {
-          "name": "The Refuge",
-          "date": "Jun 12, 2026",
+          "name": "Truxel-Del Paso Mixed-Use",
+          "date": "Aug 10, 2026",
           "url": ""
         },
         {
-          "name": "3684 Bret Harte Court Residential Hotel",
-          "date": "Jun 12, 2026",
-          "url": ""
-        },
-        {
-          "name": "Green Valley Commercial Center",
-          "date": "Jun 5, 2026",
-          "url": ""
-        },
-        {
-          "name": "Hard Rock Sacramento at Fire Mountain Expansion",
-          "date": "Jun 2, 2026",
-          "url": ""
-        },
-        {
-          "name": "Dignity Health Advanced Ambulatory Care Center",
-          "date": "Jun 2, 2026",
-          "url": ""
-        },
-        {
-          "name": "The Addie",
-          "date": "May 31, 2026",
-          "url": ""
+          "name": "1900 Club Center",
+          "date": "Aug 10, 2026",
+          "url": "https://www.bizjournals.com/sacramento/news/2026/07/24/eah-housing-affordable-north-natomas.html"
         }
       ]
     },
@@ -268,7 +273,7 @@
       "title": "SACOG Existing Inventory",
       "blurb": "The baseline regional development inventory imported from SACOG's own pipeline dataset \u2014 the foundation the live feeds build on.",
       "count": 458,
-      "freshness": "Last refreshed Jun 12, 2026",
+      "freshness": "Last refreshed Jul 6, 2026",
       "detail": "Baseline regional inventory",
       "recent": []
     }
