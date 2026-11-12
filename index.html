@@ -30,14 +30,25 @@
       <span class="inputs-btn-title">Pipeline Inputs</span>
       <span class="inputs-btn-sub">Where these projects come from &rsaquo;</span>
     </button>
+    <!-- Review button (opens the review lists, including unmapped projects) -->
+    <button id="review-btn" type="button" aria-haspopup="dialog">
+      <span class="inputs-btn-title">Review</span>
+      <span class="inputs-btn-sub" id="review-btn-sub">Projects that need a look &rsaquo;</span>
+    </button>
   </div>
 
   <!-- Legend (project type colors) -->
   <div id="legend" class="panel">
-    <div class="panel-title">Project Type</div>
-    <div class="legend-row"><span class="dot" style="background:#ffd400"></span> Residential</div>
-    <div class="legend-row"><span class="dot" style="background:#b14bff"></span> Mixed Use (Housing + Jobs)</div>
-    <div class="legend-row"><span class="dot" style="background:#ff3b30"></span> Non-Residential</div>
+    <div class="panel-title" id="legend-title">Project Type</div>
+    <div id="legend-rows"></div>
+    <label class="color-by">Color by
+      <select id="color-mode">
+        <option value="type">Project type</option>
+        <option value="stage">Stage</option>
+        <option value="location">Location confidence</option>
+        <option value="delivery">Delivery confidence</option>
+      </select>
+    </label>
   </div>
 
   <!-- Pipeline Inputs full-page dashboard -->
@@ -51,6 +62,25 @@
         <button id="inputs-close" aria-label="Close">&times;</button>
       </header>
       <div id="inputs-grid"><div class="metric-loading">Loading&hellip;</div></div>
+    </div>
+  </div>
+
+  <!-- Review lists full-page panel -->
+  <div id="review-overlay" role="dialog" aria-modal="true" aria-label="Review" aria-hidden="true">
+    <div id="review-panel">
+      <header id="review-header">
+        <div>
+          <h2>Review</h2>
+          <p id="review-intro">Projects that need a person to look at them.</p>
+        </div>
+        <div class="review-actions">
+          <span id="corr-count"></span>
+          <button id="corr-download" type="button" class="ed-btn">Download corrections</button>
+          <button id="review-close" aria-label="Close">&times;</button>
+        </div>
+      </header>
+      <p class="review-how">Corrections you flag on a project are kept in this browser. Download them here and save the file in <b>inbox/corrections/</b> in the Pipeline Project Inventory folder.</p>
+      <div id="review-grid"><div class="metric-loading">Loading&hellip;</div></div>
     </div>
   </div>
 

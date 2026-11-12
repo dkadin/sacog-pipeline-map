@@ -357,9 +357,9 @@ table.detail-table a:hover { text-decoration: underline; }
    Inputs button. Cap the panel and let just the rankings list scroll, so the
    hero numbers and the button stay visible and clear of the legend. Taller
    screens (desktops / external monitors) keep the exact un-scrolled layout. */
-@media (max-height: 900px) {
+@media (max-height: 1150px) {
   #metrics {
-    max-height: calc(100vh - 240px);
+    max-height: calc(100vh - 285px);
     display: flex; flex-direction: column;
   }
   #metrics .panel-title { flex: 0 0 auto; }
@@ -371,7 +371,10 @@ table.detail-table a:hover { text-decoration: underline; }
     flex: 1 1 auto; min-height: 64px;
     overflow-y: auto; padding-right: 4px;
   }
+  .jrow { flex: 0 0 auto; }
   #inputs-btn { flex: 0 0 auto; }
+  #unmapped-note { flex: 0 0 auto; }
+  .metric-hero, .metric-pcts, .metric-section { flex: 0 0 auto; }
 }
 
 @media (max-width: 720px) {
@@ -429,3 +432,110 @@ table.detail-table a:hover { text-decoration: underline; }
 
 /* keep edit-mode instructions out of the parcel-clicking zone */
 body.editing-mode #status-msg { top: auto; bottom: 28px; }
+
+
+/* ============ Additions for the SACOG inventory build ============ */
+
+/* Review button under Pipeline Inputs */
+#review-btn {
+  display: block; width: 100%; box-sizing: border-box;
+  margin-top: 8px; padding: 9px 13px; text-align: left; cursor: pointer;
+  color: var(--text); font-family: inherit;
+  background: rgba(255,176,32,0.12);
+  border: 1px solid rgba(255,176,32,0.5); border-radius: 10px;
+}
+#review-btn:hover { background: rgba(255,176,32,0.2); }
+#review-btn .inputs-btn-sub { color: var(--text-dim); }
+#unmapped-note {
+  display: block; width: 100%; text-align: left; cursor: pointer; font-family: inherit;
+  background: none; border: 1px dashed rgba(255,255,255,0.25); border-radius: 8px;
+  color: var(--text-dim); font-size: 11.5px; line-height: 1.35; padding: 7px 9px; margin-bottom: 12px;
+}
+#unmapped-note:hover { color: var(--text); border-color: rgba(255,255,255,0.5); }
+@media (max-height: 1150px) { #review-btn { flex: 0 0 auto; } }
+
+/* Color-by selector in the legend */
+.color-by { display: block; margin-top: 10px; font-size: 11px; color: var(--text-dim); }
+.color-by select {
+  display: block; width: 100%; margin-top: 4px; padding: 5px 6px; font: inherit; font-size: 12px;
+  color: var(--text); background: rgba(255,255,255,0.06);
+  border: 1px solid var(--panel-border); border-radius: 7px;
+}
+.color-by select option { color: #000; }
+
+/* Detail sidebar: confidence cards, dossier, corrections */
+#detail { width: 380px; }
+.flag-held { color: #ffcf7a; border-color: rgba(255,176,32,0.45); background: rgba(255,176,32,0.1); }
+.conf-wrap { display: grid; gap: 8px; margin: 0 0 14px; }
+.conf-card {
+  padding: 10px 12px; border-radius: 10px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--panel-border);
+}
+.conf-q { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-bottom: 6px; }
+.conf-badge { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; color: #000; }
+.conf-basis { font-size: 12px; color: var(--text); margin-top: 7px; line-height: 1.4; }
+.detail-section {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-dim);
+  margin: 18px 0 8px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);
+}
+.review-note {
+  font-size: 12.5px; line-height: 1.4; padding: 8px 10px; margin-bottom: 6px; border-radius: 8px;
+  background: rgba(255,176,32,0.1); border: 1px solid rgba(255,176,32,0.4);
+}
+.dossier-list { list-style: none; margin: 0; padding: 0; }
+.dossier-list li { font-size: 12.5px; line-height: 1.4; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); word-break: break-word; }
+.dossier-list a { color: var(--accent); text-decoration: none; }
+.dossier-list a:hover { text-decoration: underline; }
+.dossier-meta { display: block; font-size: 11px; color: var(--text-dim); }
+.dossier-list.timeline li { border-left: 2px solid rgba(255,255,255,0.15); border-bottom: none; padding: 0 0 10px 10px; }
+.dossier-empty { font-size: 12px; color: var(--text-dim); }
+.corr-form { display: grid; grid-template-columns: 1fr 78px; gap: 6px; }
+.corr-form select, .corr-form input, .corr-form textarea {
+  font: inherit; font-size: 12.5px; color: var(--text); background: rgba(255,255,255,0.06);
+  border: 1px solid var(--panel-border); border-radius: 7px; padding: 6px 8px; min-width: 0;
+}
+.corr-form select option { color: #000; }
+.corr-form textarea { grid-column: 1 / -1; min-height: 64px; resize: vertical; }
+.corr-form .ed-btn { grid-column: 1 / -1; }
+#corr-msg { grid-column: 1 / -1; font-size: 11.5px; color: var(--green); }
+
+/* Review full-page panel (same frame as Pipeline Inputs) */
+#review-overlay {
+  position: fixed; inset: 0; z-index: 50; display: none;
+  align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto;
+  background: rgba(0,0,0,0.8); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+#review-overlay.open { display: flex; }
+#review-panel {
+  width: 100%; max-width: 1100px; margin: auto;
+  background: var(--panel-bg); border: 1px solid var(--panel-border);
+  border-radius: 16px; box-shadow: 0 12px 48px rgba(0,0,0,0.6); padding: 22px 24px 26px;
+}
+#review-header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  border-bottom: 1px solid var(--panel-border); padding-bottom: 14px; margin-bottom: 12px;
+}
+#review-header h2 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.2px; }
+#review-intro { margin: 4px 0 0; font-size: 13px; color: var(--text-dim); }
+.review-actions { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+#corr-count { font-size: 12px; color: var(--text-dim); }
+#review-close { background: none; border: none; color: var(--text-dim); font-size: 30px; line-height: 1; cursor: pointer; padding: 0 4px; }
+#review-close:hover { color: var(--text); }
+.review-how { font-size: 12.5px; color: var(--text-dim); margin: 0 0 14px; }
+.rv-queue { border: 1px solid var(--panel-border); border-radius: 12px; margin-bottom: 10px; background: rgba(255,255,255,0.03); }
+.rv-head {
+  display: flex; justify-content: space-between; align-items: center; width: 100%;
+  background: none; border: none; color: var(--text); font: inherit; font-size: 15px; font-weight: 700;
+  padding: 12px 14px 4px; cursor: pointer; text-align: left;
+}
+.rv-n { font-size: 18px; font-weight: 800; }
+.rv-help { font-size: 12px; color: var(--text-dim); padding: 0 14px 12px; }
+.rv-items { list-style: none; margin: 0; padding: 0 8px 8px; max-height: 52vh; overflow-y: auto; }
+.rv-item {
+  display: block; width: 100%; text-align: left; cursor: pointer; font: inherit; color: var(--text);
+  background: none; border: none; border-top: 1px solid rgba(255,255,255,0.07); padding: 8px 6px; border-radius: 6px;
+}
+.rv-item:hover { background: rgba(255,255,255,0.06); }
+.rv-name { display: block; font-size: 13px; font-weight: 600; }
+.rv-meta, .rv-detail { display: block; font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+.rv-detail { color: #ffcf7a; }
