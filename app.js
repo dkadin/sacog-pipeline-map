@@ -2,7 +2,7 @@
  * Pure front-end. Built by tool/ppi/site.py from master/pipeline.sqlite.
  * Every data file is a small script that calls PPI_LOAD(name, data), so the page
  * works both from a web host and when opened straight from the synced folder.
- * No API key required: dark basemap = CARTO raster tiles, glyphs = protomaps fonts.
+ * No API key required: basemaps = Esri public tile services, glyphs = protomaps fonts.
  */
 
 // ---- Data loader (script tags, so it also works over file://) ----
@@ -114,52 +114,46 @@ function dotFade(base) {
   ];
 }
 
-// ---- Basemap style: black background + dark raster tiles, no token ----
+// ---- Basemap style: black background + dark raster tiles, no key or token ----
+// Both basemaps are Esri's public tile services (the same host), which need no
+// API key. The dark base is the Dark Gray Canvas; its tiles stop at zoom 16, so
+// MapLibre stretches them when you zoom in further.
+const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
 const style = {
   version: 8,
   glyphs: "https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf",
   sources: {
-    "carto-dark": {
+    "dark-base": {
       type: "raster",
-      tiles: [
-        "https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
-        "https://b.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
-        "https://c.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
-        "https://d.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
-      ],
+      tiles: [ESRI + "Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
       tileSize: 256,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      maxzoom: 16,
+      attribution: 'Basemap &copy; <a href="https://www.esri.com/">Esri</a>, TomTom, Garmin, FAO, NOAA, USGS, &copy; OpenStreetMap contributors, and the GIS User Community',
     },
     "esri-imagery": {
       type: "raster",
-      tiles: [
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      ],
+      tiles: [ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}"],
       tileSize: 256,
       maxzoom: 19,
       attribution: 'Imagery &copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community',
     },
     // Labels-only raster (street + place names) so zoomed-in views have context
     // the no-labels basemap omits. Faded in by zoom and kept beneath the data.
-    "carto-dark-labels": {
+    "dark-labels": {
       type: "raster",
-      tiles: [
-        "https://a.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png",
-        "https://b.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png",
-        "https://c.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png",
-        "https://d.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png",
-      ],
+      tiles: [ESRI + "Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"],
       tileSize: 256,
+      maxzoom: 16,
     },
   },
   layers: [
     { id: "bg", type: "background", paint: { "background-color": "#000000" } },
-    { id: "carto-dark", type: "raster", source: "carto-dark", paint: { "raster-opacity": 0.82 } },
+    { id: "dark-base", type: "raster", source: "dark-base", paint: { "raster-opacity": 0.9 } },
     { id: "esri-imagery", type: "raster", source: "esri-imagery", layout: { visibility: "none" } },
     // Street/place labels appear as you zoom in (off at the regional view to keep
     // it clean); shown only on the dark base (hidden over imagery in setBasemap).
-    { id: "carto-dark-labels", type: "raster", source: "carto-dark-labels",
-      paint: { "raster-opacity": ["interpolate", ["linear"], ["zoom"], 12.5, 0, 14, 0.85] } },
+    { id: "dark-labels", type: "raster", source: "dark-labels",
+      paint: { "raster-opacity": ["interpolate", ["linear"], ["zoom"], 12.5, 0, 14, 0.9] } },
   ],
 };
 
@@ -186,13 +180,13 @@ function styleParcelsForBasemap() {
 function setBasemap(which) {
   const dark = which !== "imagery";
   currentBasemap = dark ? "dark" : "imagery";
-  if (map.getLayer("carto-dark"))
-    map.setLayoutProperty("carto-dark", "visibility", dark ? "visible" : "none");
+  if (map.getLayer("dark-base"))
+    map.setLayoutProperty("dark-base", "visibility", dark ? "visible" : "none");
   if (map.getLayer("esri-imagery"))
     map.setLayoutProperty("esri-imagery", "visibility", dark ? "none" : "visible");
   // Street/place labels only belong over the dark base — they're illegible on imagery.
-  if (map.getLayer("carto-dark-labels"))
-    map.setLayoutProperty("carto-dark-labels", "visibility", dark ? "visible" : "none");
+  if (map.getLayer("dark-labels"))
+    map.setLayoutProperty("dark-labels", "visibility", dark ? "visible" : "none");
   document.body.classList.toggle("imagery-base", !dark);
   styleParcelsForBasemap();
 }
