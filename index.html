@@ -21,6 +21,13 @@
   <!-- Map -->
   <div id="map"></div>
 
+  <!-- Shown while the "recently added" view is on -->
+  <div id="recent-banner" hidden>
+    <span id="recent-banner-text"></span>
+    <button id="recent-list" type="button">List them</button>
+    <button id="recent-clear" type="button">Show all</button>
+  </div>
+
   <!-- Metrics panel (top-left) -->
   <div id="metrics" class="panel">
     <div class="panel-title">Mapped Pipeline</div>
@@ -47,6 +54,15 @@
         <option value="stage">Stage</option>
         <option value="location">Location confidence</option>
         <option value="delivery">Delivery confidence</option>
+      </select>
+    </label>
+    <label class="color-by">Show
+      <select id="recent-mode">
+        <option value="all">All projects</option>
+        <option value="new7">Added in the last 7 days</option>
+        <option value="touched7">Added or updated, last 7 days</option>
+        <option value="new30">Added in the last 30 days</option>
+        <option value="touched30">Added or updated, last 30 days</option>
       </select>
     </label>
   </div>

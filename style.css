@@ -539,3 +539,22 @@ body.editing-mode #status-msg { top: auto; bottom: 28px; }
 .rv-name { display: block; font-size: 13px; font-weight: 600; }
 .rv-meta, .rv-detail { display: block; font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
 .rv-detail { color: #ffcf7a; }
+
+/* "Recently added" view */
+#recent-banner {
+  position: absolute; top: 58px; left: 50%; transform: translateX(-50%); z-index: 6;
+  display: flex; align-items: center; gap: 10px; padding: 7px 8px 7px 14px;
+  font-size: 12.5px; color: #111; background: #ffd60a; border-radius: 999px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.45); white-space: nowrap;
+}
+#recent-banner[hidden] { display: none; }
+#recent-banner button {
+  font: inherit; font-size: 12px; font-weight: 600; padding: 4px 11px; border-radius: 999px; cursor: pointer;
+  color: #111; background: rgba(0,0,0,0.12); border: 0;
+}
+#recent-banner button:hover { background: rgba(0,0,0,0.22); }
+.rv-badge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.4px; padding: 1px 6px; margin-right: 6px;
+  border-radius: 999px; color: #111; background: #ffd60a; vertical-align: 1px; }
+.rv-badge.upd { background: #9ad0ff; }
+.rv-badge.off { background: rgba(255,255,255,0.25); color: #fff; }
+@media (max-width: 760px) { #recent-banner { top: 50px; font-size: 11.5px; } }

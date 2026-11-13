@@ -324,9 +324,13 @@ function renderMetrics(m) {
     })
     .join("");
 
-  const unmapped = m.unmapped_projects
+  const unmapped = m.filtered
+    ? (m.off_map ? `<button id="unmapped-note" type="button">${fmt(m.off_map)} more recent record${m.off_map === 1 ? " is" : "s are"} not on the map &rsaquo;</button>` : "")
+    : m.unmapped_projects
     ? `<button id="unmapped-note" type="button">${fmt(m.unmapped_projects)} more projects (${fmt(m.unmapped_units)} units) are not mapped yet &rsaquo;</button>`
     : "";
+  const ttl = document.querySelector("#metrics .panel-title");
+  if (ttl) ttl.textContent = m.filtered ? m.title : "Mapped Pipeline";
   document.getElementById("metrics-body").innerHTML = `
     <div class="metric-hero">
       <div class="num">${fmt(m.total_units)}</div>
@@ -357,7 +361,7 @@ function renderMetrics(m) {
     <div class="jlist">${top}</div>
   `;
   const un = document.getElementById("unmapped-note");
-  if (un) un.addEventListener("click", () => openReview("unmapped"));
+  if (un) un.addEventListener("click", () => openReview(m.filtered ? "recent" : "unmapped"));
   const rb = document.getElementById("review-btn-sub");
   if (rb && m.review_projects) rb.innerHTML = `${fmt(m.review_projects)} projects need a look &rsaquo;`;
 }
@@ -373,6 +377,8 @@ map.on("load", async () => {
     return;
   }
   projectIndex = new Map((geojson.features || []).map((f) => [Number(f.properties.project_id), f]));
+  baseMetrics = geojson.metrics || null;
+  initRecent();
 
   const features = geojson.features || [];
   setStatus(features.length ? null : "No projects with coordinates yet.");
@@ -510,6 +516,7 @@ map.on("load", async () => {
       // so reconcile both now that the layers exist.
       styleParcelsForBasemap();
       applyPipelineVisibility();
+      if (recentMode !== "all") applyRecent(recentMode);   // footprints arrive after the dots
       // these parcels were just inserted above the permit dots; if the permit
       // overlay is on, lift the dots back above the parcels.
       if (overlayLoaded.permits) raisePermitsAboveParcels();
@@ -560,13 +567,15 @@ const FIELD_LABELS = {
   apn: "Assessor Parcels",
   bp2025: "2025 Blueprint",
   entry_date: "Latest Evidence",
+  added_on: "Added to Inventory",
+  updated_on: "Last Updated by Intake",
   notes: "Notes",
 };
 const FIELD_ORDER = [
   "project_number", "jurisdiction", "county", "project_type", "stage_label", "current_status", "address",
   "units", "unit_split", "remaining_units", "units_built", "affordable", "affordable_units",
   "hotel_rooms", "senior", "nonres_sqft", "nonres_by_use", "jobs_estimated", "source_acres", "res_den",
-  "developer", "apn", "bp2025", "entry_date", "notes",
+  "developer", "apn", "bp2025", "entry_date", "added_on", "updated_on", "notes",
 ];
 const NUMERIC_FIELDS = new Set(["units", "remaining_units", "units_built", "affordable_units",
   "hotel_rooms", "nonres_sqft", "jobs_estimated"]);
@@ -664,6 +673,7 @@ const QUEUE_NAMES = {
   shared_parcels: "Shared parcels", possible_duplicate: "Possible duplicate",
   confirm_status: "Confirm status", no_quantities: "No quantities",
   below_threshold: "Below threshold", stage_unknown: "Stage unknown",
+  source_conflict: "Source conflict", held_out: "Held out", intake_note: "Note from intake",
 };
 function queueLabel(q) { return QUEUE_NAMES[q] || q; }
 
@@ -1138,14 +1148,26 @@ function renderReview() {
   document.getElementById("review-intro").textContent =
     `${fmt(total)} open items across ${rv.queues.length} lists. Click a list to open it, then a project to see it.`;
   let h = "";
-  for (const q of rv.queues) {
+  const lists = rv.queues.slice();
+  if (rv.recent && rv.recent.length) {
+    lists.unshift({
+      q: "recent", label: "Recently added or updated",
+      help: "Everything intake created or changed in the last 30 days, on the map or not.",
+      items: rv.recent.map((r) => ({
+        id: r.id, name: r.name, jur: r.jur, units: r.units, sqft: r.sqft, d: r.d,
+        badge: (r.new ? `<span class="rv-badge">NEW</span>` : `<span class="rv-badge upd">UPDATED</span>`) +
+               (r.mapped ? "" : `<span class="rv-badge off">${r.status === "pipeline" ? "NOT MAPPED" : esc(String(r.status).replace("_", " ").toUpperCase())}</span>`),
+      })),
+    });
+  }
+  for (const q of lists) {
     const open = reviewOpenQueue === q.q;
     h += `<section class="rv-queue${open ? " open" : ""}">` +
          `<button class="rv-head" data-rv-q="${esc(q.q)}"><span>${esc(q.label)}</span><span class="rv-n">${fmt(q.items.length)}</span></button>` +
          `<div class="rv-help">${esc(q.help)}</div>`;
     if (open) {
       h += `<ul class="rv-items">` + q.items.map((it) =>
-        `<li><button class="rv-item" data-rv-id="${it.id}"><span class="rv-name">${esc(it.name)}</span>` +
+        `<li><button class="rv-item" data-rv-id="${it.id}"><span class="rv-name">${it.badge || ""}${esc(it.name)}</span>` +
         `<span class="rv-meta">${esc(it.jur)}${it.units ? " · " + fmt(it.units) + " units" : ""}${it.sqft ? " · " + fmt(it.sqft) + " sq ft" : ""}</span>` +
         (it.d ? `<span class="rv-detail">${esc(it.d)}</span>` : "") + `</button></li>`).join("") + `</ul>`;
     }
@@ -1186,6 +1208,99 @@ document.addEventListener("keydown", (e) => {
 
 // ---- Color-by selector ----
 document.getElementById("color-mode").addEventListener("change", (e) => applyColorMode(e.target.value));
+
+// ---- "Recently added" view: show only what intake created (or changed) lately ----
+// Filters the dots, labels and footprints, and recomputes the metrics panel for
+// what is left, so a new batch can be read on its own.
+let baseMetrics = null;
+let recentMode = "all";
+const RECENT_MODES = {
+  new7: { days: 7, upd: false, text: "added" }, touched7: { days: 7, upd: true, text: "added or updated" },
+  new30: { days: 30, upd: false, text: "added" }, touched30: { days: 30, upd: true, text: "added or updated" },
+};
+function isoDaysAgo(n) {
+  const d = new Date(); d.setDate(d.getDate() - n);
+  return d.toLocaleDateString("en-CA");            // local YYYY-MM-DD
+}
+function recentMatch(p, mode) {
+  const m = RECENT_MODES[mode];
+  if (!m) return true;
+  const cut = isoDaysAgo(m.days);
+  return (hasVal(p.added_on) && p.added_on >= cut) || (m.upd && hasVal(p.updated_on) && p.updated_on >= cut);
+}
+function recentFeatures(mode) {
+  return [...projectIndex.values()].filter((f) => recentMatch(f.properties, mode));
+}
+function metricsFor(feats, mode, offMap) {
+  const by = {}; let u = 0, j = 0, g = 0, t = 0;
+  for (const f of feats) {
+    const p = f.properties, units = Number(p.units) || 0;
+    u += units; j += Number(p.jobs_estimated) || 0;
+    g += units * (Number(p.in_green_zone) ? 1 : 0); t += units * (Number(p.in_tpa) ? 1 : 0);
+    const name = String(p.jurisdiction || "").replace(/^(City|Town) of /, "");
+    by[name] = (by[name] || 0) + units;
+  }
+  const top = Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, units]) => ({ name, units }));
+  return {
+    filtered: true, title: `Recently ${RECENT_MODES[mode].text}`, off_map: offMap,
+    projects_mapped: feats.length, total_units: u, total_jobs: Math.round(j),
+    pct_units_green: u ? Math.round((1000 * g) / u) / 10 : 0, pct_units_tpa: u ? Math.round((1000 * t) / u) / 10 : 0,
+    top_jurisdictions: top, review_projects: baseMetrics ? baseMetrics.review_projects : 0,
+  };
+}
+function initRecent() {
+  const sel = document.getElementById("recent-mode");
+  if (!sel) return;
+  for (const o of sel.options) {
+    if (!RECENT_MODES[o.value]) continue;
+    const n = recentFeatures(o.value).length;
+    o.textContent = o.textContent.replace(/ \(\d+\)$/, "") + ` (${n})`;
+  }
+}
+async function applyRecent(mode) {
+  recentMode = RECENT_MODES[mode] ? mode : "all";
+  const on = recentMode !== "all";
+  const feats = on ? recentFeatures(recentMode) : [];
+  const ids = feats.map((f) => Number(f.properties.project_id));
+  const expr = on ? (ids.length ? ["in", ["get", "project_id"], ["literal", ids]] : ["==", ["get", "project_id"], -1]) : null;
+  for (const id of PIPELINE_LAYERS) if (map.getLayer(id)) map.setFilter(id, expr);
+  if (map.getLayer("projects-labels")) map.setLayerZoomRange("projects-labels", on ? 9 : 13, 24);
+  const banner = document.getElementById("recent-banner");
+  if (!on) {
+    banner.hidden = true;
+    renderMetrics(baseMetrics);
+    return;
+  }
+  let offMap = 0;
+  try {
+    const rv = await getReview();
+    const m = RECENT_MODES[recentMode], cut = isoDaysAgo(m.days);
+    offMap = (rv.recent || []).filter((r) => !r.mapped && r.on >= cut && (m.upd || r.new)).length;
+  } catch (e) { /* the list is optional */ }
+  renderMetrics(metricsFor(feats, recentMode, offMap));
+  const m = RECENT_MODES[recentMode];
+  document.getElementById("recent-banner-text").textContent =
+    `Showing ${fmt(feats.length)} project${feats.length === 1 ? "" : "s"} ${m.text} in the last ${m.days} days` +
+    (offMap ? ` (+${offMap} not on the map)` : "");
+  banner.hidden = false;
+  if (feats.length) {
+    let x0 = 180, y0 = 90, x1 = -180, y1 = -90;
+    for (const f of feats) {
+      const [x, y] = f.geometry.coordinates;
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+    }
+    const wide = window.innerWidth > 900;
+    map.fitBounds([[x0, y0], [x1, y1]], {
+      padding: { top: 110, bottom: 70, left: wide ? 360 : 40, right: wide ? 260 : 40 }, maxZoom: 13, duration: 700,
+    });
+  }
+}
+document.getElementById("recent-mode").addEventListener("change", (e) => applyRecent(e.target.value));
+document.getElementById("recent-clear").addEventListener("click", () => {
+  document.getElementById("recent-mode").value = "all";
+  applyRecent("all");
+});
+document.getElementById("recent-list").addEventListener("click", () => openReview("recent"));
 applyColorMode("type");
 saveCorrections();
 
